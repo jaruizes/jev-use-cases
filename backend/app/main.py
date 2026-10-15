@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from .catalog import CASES, BY_ID, public_case
 from .providers import claude, jev
 from .pricing import estimate, list_prices, change_price
-from .scenarios import reference, assess, public_scenarios
+from .scenarios import reference, assess, public_scenarios, validate_dataset
 
 logger = logging.getLogger("jev_decision_lab")
 app = FastAPI(title="Jev Decision Lab API", version="0.1.0")
@@ -23,6 +23,7 @@ class ExecuteRequest(BaseModel):
     input: str = Field(min_length=1, max_length=20000)
     providers: list[Literal["jev", "haiku", "sonnet"]] = Field(min_length=1, max_length=3)
     scenarioId: str | None = None
+    customScenario: dict[str, Any] | None = None
 
 RUNS: dict[str, dict] = {}
 
@@ -51,7 +52,15 @@ async def execute(body: ExecuteRequest):
         raise HTTPException(404, "Unknown use case")
     if len(set(body.providers)) != len(body.providers):
         raise HTTPException(422, "Duplicate providers")
-    selected_reference = reference(case.id, body.scenarioId, body.input) if body.scenarioId else None
+    custom = None
+    if body.customScenario is not None:
+        try:
+            custom = validate_dataset(case.id, [body.customScenario])[0]
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        if body.scenarioId != custom["id"] or body.input != custom["input"]:
+            raise HTTPException(422, "Custom scenario ID and input must match the execution request")
+    selected_reference = custom["expected"] if custom is not None else (reference(case.id, body.scenarioId, body.input) if body.scenarioId else None)
     async def run(provider: str) -> dict[str, Any]:
         started = time.perf_counter()
         try:
@@ -97,7 +106,8 @@ async def execute(body: ExecuteRequest):
                     "detail": detail, "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
     result = {
         "id": str(uuid4()), "useCaseId": case.id, "input": body.input,
-        "scenarioId": body.scenarioId if selected_reference is not None or (body.scenarioId and any(s["id"] == body.scenarioId and s["input"] == body.input for s in public_scenarios(case.id))) else None,
+        "scenarioId": custom["id"] if custom else (body.scenarioId if selected_reference is not None or (body.scenarioId and any(s["id"] == body.scenarioId and s["input"] == body.input for s in public_scenarios(case.id))) else None),
+        "datasetSource": "custom" if custom else "built-in",
         "expected": selected_reference,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": await asyncio.gather(*(run(p) for p in body.providers)),
@@ -137,3 +147,15 @@ def put_pricing(provider: str, body: PriceUpdate):
         return change_price(provider, body.inputUsdPerMillion, body.outputUsdPerMillion)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+class DatasetValidationRequest(BaseModel):
+    useCaseId: str
+    scenarios: list[dict[str, Any]]
+
+@app.post("/api/datasets/validate")
+def dataset_validation(body: DatasetValidationRequest):
+    try:
+        scenarios = validate_dataset(body.useCaseId, body.scenarios)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return {"valid": True, "useCaseId": body.useCaseId, "count": len(scenarios), "scenarios": scenarios}
