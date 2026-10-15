@@ -4,7 +4,7 @@
 
 A visual, reproducible proof of concept (PoC) to compare **Jev**, **Claude Haiku**, **Claude Sonnet** and **deterministic rules**, highlighting where structured decisions win on quality, latency or cost, and where an LLM is essential.
 
-**Status:** v0.1 Playground implemented (Angular + FastAPI). The bulk benchmark runner, reference datasets, persistence and pricing analysis are planned. This project does not assume that Jev will win any benchmark. See [implementation status](IMPLEMENTATION.md).
+**Status:** v0.1 Playground implemented (Angular + FastAPI). The bulk benchmark runner, reference datasets, and persistence are planned. M1 provides estimated per-request costs and cost/1,000 projections (not invoices). This project does not assume that Jev will win any benchmark. See [implementation status](IMPLEMENTATION.md).
 
 ## Goals
 
@@ -230,3 +230,9 @@ Classify an email into SALES, SUPPORT, BILLING, SPAM or OTHER from its subject a
 Assign a priority from 0 (informational) to 4 (critical) based on business impact, affected customers, urgency, and workarounds. Compare Jev with Claude Haiku/Sonnet; scoring is an assessment and must not bypass formal incident-management escalation policies.
 
 **Playground provider selection:** only Jev, Claude Haiku and Claude Sonnet. UC4 explicitly highlights that Jev is not an LLM and cannot generate an open-ended architecture.
+
+## M1 — Cost Intelligence
+
+The Playground reports versioned **estimated** USD costs using provider-reported token usage. Claude Haiku 4.5 uses $1 input / $5 output per million tokens; Sonnet 4.5 uses $3 / $15. A Jev price must be supplied by the operator via `JEV_INPUT_USD_PER_MTOK` (USD per million input tokens); otherwise its cost is explicitly unavailable. No cost of $0 is invented. These figures do not include billing adjustments, cache/batch discounts, taxes, or volume changes.
+
+Sources: [Haiku 4.5 pricing](https://www.anthropic.com/news/claude-haiku-4-5) · [Sonnet 4.5 pricing](https://www.anthropic.com/news/claude-sonnet-4-5).
