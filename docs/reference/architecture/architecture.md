@@ -1,265 +1,276 @@
-# Architecture — Jev Decision Lab
+# Jev Decision Lab — Architecture
 
-> **Estado:** propuesta inicial · **Alcance de esta versión:** arquitectura frontend.  
-> **Principio:** una arquitectura fácil de leer y evolucionar, con un enfoque *Specification-Driven Development* (SDD) ligero, sin burocracia innecesaria.
+> **Status:** Implemented proof of concept, updated October 2026.  
+> **Scope:** Current application architecture and development conventions, not a target-state wish list.  
+> **Principle:** Keep the system understandable and evolvable through pragmatic, lightweight Specification-Driven Development (SDD).
 
-## 1. Objetivos y principios
+## 1. Purpose and boundaries
 
-Jev Decision Lab es una PoC visual para comparar Jev, Claude y reglas deterministas en cuatro casos de uso: **Model Routing**, **Lead Scoring**, **Semantic Guardrails** y **Architecture Decision & Planning**.
+Jev Decision Lab is a visual application for comparing **TypeSafe Jev (System One)** with **Anthropic Claude Haiku and Sonnet** on semantic decision-making tasks. It reports structured outputs, measured latency, estimated token costs, and agreement with illustrative reference labels.
 
-La arquitectura debe permitir que alguien nuevo en el proyecto pueda identificar rápidamente:
-1. Qué pantalla implementa una funcionalidad.
-2. Dónde está la lógica de presentación.
-3. Qué servicio llama al backend.
-4. Qué contrato de datos intercambian frontend y API.
-5. Cómo se prueba y amplía un caso de uso.
+There are **seven use cases**:
 
-**Decisiones guía:**
-- **Sencillez antes que abstracción.** No crear capas, interfaces o patrones sin una necesidad concreta.
-- **Organización por funcionalidad (feature-first)** en lugar de agrupar toda la aplicación por tipos técnicos.
-- **Componentes pequeños, con una responsabilidad identificable.** Evitar un componente raíz con toda la interfaz y lógica.
-- **Servicios específicos** para la comunicación HTTP con el backend; los componentes no usan `HttpClient` directamente.
-- **Tipado estricto** y contratos explícitos en el límite de la API.
-- **Reutilización con criterio:** compartir lo que verdaderamente es común, no anticipar una plataforma genérica.
-- **Separación de responsabilidades:** el frontend presenta y orquesta la interacción; el backend ejecuta proveedores, protege claves, calcula costes/métricas y persiste ejecuciones.
+| ID | Use case | Jev operation | Evaluation |
+| --- | --- | --- | --- |
+| UC1 | Intelligent Model Routing | Choice | Exact route match |
+| UC2 | Intelligent Lead Scoring | Score | Reference score within ±0.5 |
+| UC3 | Semantic Guardrails | Noul | Boolean classification at threshold 0.5 |
+| UC4 | Architecture Decision & Planning | Not applicable: generative Claude only | Qualitative review |
+| UC5 | Email Classification | Choice | Exact category match |
+| UC6 | Incident Prioritization | Score | Reference score within ±0.5 |
+| UC7 | Incident Triage | **Score + Noul + Choice** in one call | All three answers must match the reference rules |
 
-## 2. Enfoque SDD pragmático
+Jev evaluates bounded semantic questions. Claude uses forced tool outputs for comparable structured decisions, and generates prose for UC4. **A typed output is not exclusive to Jev**, and any semantic risk score is advisory, not an authorization mechanism.
 
-Usaremos especificaciones cortas y vivas, **no** un proceso rígido.
+### Current functional areas
 
-Antes de desarrollar una funcionalidad:
-- Redactar un pequeño apartado o ficha con **objetivo, comportamiento, entradas/salidas, estados de UI y criterios de aceptación**.
-- Acordar el **contrato de API** que necesita (o indicar que todavía es provisional).
-- Implementar el cambio en su módulo funcional con las pruebas relevantes.
-- Actualizar la especificación si el comportamiento finalmente implementado cambia.
+1. **Overview:** seven-case catalog and feature navigation.
+2. **Playground:** one editable input, one provider comparison, detailed response, latency, costs and Jev/Claude ratios.
+3. **Test Scenarios:** five predefined scenarios per case, 1–20 iterations, provider selection, sequential rounds with parallel providers, progress and per-batch summaries.
+4. **Pricing Settings:** inspect and edit per-provider USD-per-million-token rates.
+5. **History:** review API executions recorded in the current backend process.
 
-Esta página recoge las decisiones arquitectónicas. Las fichas funcionales podrán vivir en `reference/specifications/<feature>.md` cuando el código empiece a crecer. No exigimos una ficha para cambios triviales. Los detalles de implementación que no afecten a contratos o decisiones no necesitan documentación adicional.
+There is **no Benchmarks feature**. The earlier `/benchmarks` path redirects to `/test-scenarios`.
 
-**Definition of Done (ligera):** el caso se puede ejecutar visualmente, los estados de carga/error se muestran, el contrato está tipado, la lógica está en su lugar y las pruebas del cambio pasan.
+## 2. Architectural principles
 
-## 3. Arquitectura frontend
+- **Simplicity before abstraction:** introduce layers or patterns only when they solve an observed need.
+- **Feature-first organization:** keep Angular pages and presentation concerns close to their feature.
+- **Small components and readable templates:** favor separate `.ts` and `.html` files for nontrivial views.
+- **Explicit API boundary:** external model SDKs and credentials stay in the backend.
+- **Typed, validated contracts:** distinguish structured decisions, generated text, provider errors, missing cost data and reference judgments.
+- **Faithful comparison:** use equivalent input context, one provider request per comparison, and clearly distinguish actual usage from cost estimates.
+- **Safe failure:** return useful sanitized error categories and log diagnostic metadata without leaking credentials or user input.
+- **No fabricated quality claims:** reference labels are illustrative; they are not expert-certified ground truth.
+- **Lightweight SDD:** document observable behavior and acceptance criteria without introducing process overhead.
 
-### 3.1 Tecnologías y estilo
-
-- **Angular** con TypeScript en modo estricto.
-- **Standalone components** y **rutas con lazy loading** por funcionalidad. La palabra «módulo» se refiere aquí a un **módulo funcional**, no necesariamente a un `NgModule` de Angular.
-- **Angular Router** para navegación.
-- **HttpClient** en servicios de acceso a API.
-- **Signals** y estado local de componentes para comenzar. No incorporar NgRx ni una solución global compleja sin evidencia de necesidad.
-- **Reactive Forms** para entradas editables y validaciones.
-- Estilos por componente y un pequeño sistema de variables/tokens compartidos; elegir biblioteca visual en una decisión separada si procede.
-- Pruebas unitarias de servicios y lógica de UI, más unas pocas pruebas end-to-end de los recorridos principales.
-
-No se fija una versión concreta de Angular hasta crear el proyecto y verificar compatibilidades.
-
-### 3.2 Vista por capas
+## 3. System overview
 
 ```text
-                         Angular frontend
-┌──────────────────────────────────────────────────────────────┐
-│ App Shell / Router                                           │
-│ navegación, layout, configuración global                     │
-├──────────────────────────────────────────────────────────────┤
-│ Features (módulos funcionales con carga diferida)             │
-│ Dashboard | Playground | Benchmarks | Results                │
-│                                                              │
-│ Pages / containers  →  UI components  →  view models         │
-│         │                                                    │
-│         └──────────→ Feature facade/state (solo si aporta)   │
-├──────────────────────────────────────────────────────────────┤
-│ Services (acceso a API del backend)                          │
-│ use-cases-api | executions-api | benchmarks-api | results-api│
-│         │                                                    │
-│         └──────────→ HttpClient / interceptors               │
-├──────────────────────────────────────────────────────────────┤
-│ Core (configuración, errores globales) | Shared (UI reusable)│
-└───────────────────────────┬──────────────────────────────────┘
-                            │ HTTP JSON / SSE cuando haga falta
-                       FastAPI backend
-                   Proveedores / métricas / datos
+Browser
+  │
+  ▼
+Angular 20 SPA (Nginx)
+  ├── Overview
+  ├── Playground (single execution)
+  ├── Test Scenarios (repeated runs / local report)
+  ├── Pricing Settings
+  └── History
+  │
+  │ HTTP JSON via /api (Nginx reverse proxy)
+  ▼
+FastAPI (Python)
+  ├── Catalog + reference scenarios
+  ├── Execute request orchestration
+  │     ├── TypeSafe Jev SDK → System One
+  │     └── Anthropic SDK → Claude Haiku / Sonnet
+  ├── Reference agreement evaluation
+  ├── Token-cost estimation and rate registry
+  ├── In-memory execution history
+  └── SQLite pricing settings
+        └── Docker named volume (pricing-data)
 ```
 
-Los componentes **no acceden a los SDK de Jev ni Anthropic**; tampoco almacenan claves API. El backend centraliza esa responsabilidad.
+Docker Compose runs the `frontend` and `api` services. Nginx serves Angular and proxies `/api/` to FastAPI. API keys are loaded from the local `.env` file into the API service, never into the Angular build.
 
-### 3.3 Organización del código propuesta
+### Runtime configuration
+
+- `TYPESAFE_API_KEY`: Jev credentials.
+- `ANTHROPIC_API_KEY`: Anthropic credentials.
+- `CLAUDE_HAIKU_MODEL` and `CLAUDE_SONNET_MODEL`: selected API models; defaults are Claude Haiku 5.5 and Sonnet 5.5.
+- `CORS_ORIGINS`: backend CORS configuration.
+- `PRICING_DB_PATH`: optional backend path for the SQLite price registry (default `/app/data/pricing.sqlite3`).
+- `JEV_INPUT_USD_PER_MTOK`: earlier pricing override convention; Pricing Settings is now the primary editable rate mechanism.
+
+## 4. Frontend architecture
+
+### Technology and conventions
+
+- Angular 20, standalone components, lazy-loaded feature routes, strict TypeScript.
+- Angular Router and `HttpClient` for application navigation and API access.
+- Signals for view state and template updates; template-driven form bindings in existing screens.
+- Styles currently live mainly in `src/styles.css`; component-specific styling can be extracted as complexity grows.
+- No NgRx or generalized feature-facade layer is required for the current PoC.
+
+### Current repository layout (key files)
 
 ```text
-frontend/
-└── src/
-    └── app/
-        ├── app.component.ts              # Solo el shell/router-outlet
-        ├── app.config.ts                 # Providers globales
-        ├── app.routes.ts                 # Rutas lazy
-        ├── core/
-        │   ├── config/                   # URL base, configuración runtime
-        │   ├── http/                     # Interceptores, error mapping
-        │   └── layout/                   # Cabecera, navegación, shell
-        ├── shared/
-        │   ├── ui/                       # Button, status, cards, loaders...
-        │   ├── models/                   # Solo tipos realmente transversales
-        │   └── utils/                    # Funciones puras compartidas
-        ├── services/                     # Acceso HTTP a la API backend
-        │   ├── use-cases-api.service.ts
-        │   ├── executions-api.service.ts
-        │   ├── benchmarks-api.service.ts
-        │   └── results-api.service.ts
-        └── features/
-            ├── dashboard/
-            │   ├── dashboard.page.ts
-            │   └── components/
-            ├── playground/
-            │   ├── playground.page.ts
-            │   ├── components/
-            │   │   ├── use-case-selector/
-            │   │   ├── provider-selector/
-            │   │   ├── input-editor/
-            │   │   └── execution-comparison/
-            │   ├── use-cases/
-            │   │   ├── model-routing/
-            │   │   ├── lead-scoring/
-            │   │   ├── semantic-guardrails/
-            │   │   └── architecture-design/
-            │   ├── models/
-            │   └── state/                # Solo si la complejidad lo pide
-            ├── benchmarks/
-            │   ├── benchmarks.page.ts
-            │   ├── components/
-            │   └── models/
-            └── results/
-                ├── results.page.ts
-                ├── components/
-                └── models/
+frontend/src/
+├── main.ts
+├── styles.css
+└── app/
+    ├── app.component.ts                   # Shell and navigation
+    ├── app.routes.ts                      # Lazy feature routes
+    ├── core/models.ts                     # Shared API/view types
+    ├── services/
+    │   ├── use-cases-api.service.ts
+    │   └── executions-api.service.ts
+    └── features/
+        ├── dashboard/dashboard.page.ts
+        ├── playground/
+        │   ├── playground.page.ts
+        │   ├── playground.page.html
+        │   └── components/provider-results.component.*
+        ├── test-scenarios/test-scenarios.page.*
+        ├── pricing/pricing.page.*
+        └── results/results.page.ts
 ```
 
-**Regla práctica:** si una pieza solo se utiliza dentro de una feature, permanece en esa feature. Pasará a `shared/` únicamente cuando se reutilice de verdad. Los modelos de datos de una API no se duplicarán en distintas features: tendrán un único origen bien identificado.
+**Component roles:** page components manage interactions and local state; small presentation components render provider results; API services wrap ordinary HTTP requests; models describe the frontend/backend contract.
 
-### 3.4 Responsabilidades
+The Pricing Settings page currently injects `HttpClient` directly. This is an exception to the intended API-service boundary; extracting a `PricingApiService` would improve consistency if the feature grows. Likewise, the Test Scenarios page owns its current batch orchestration and reporting calculations; splitting those computations into pure functions would aid testability without changing functionality.
 
-| Elemento | Responsabilidad | Qué NO debe hacer |
+### Routes
+
+| Path | Page |
+| --- | --- |
+| `/` | Overview |
+| `/playground/:id` | Single input and provider comparison |
+| `/test-scenarios` | Repeated reference scenarios |
+| `/pricing` | Pricing Settings |
+| `/results` | Execution history |
+| `/benchmarks` | Redirect to Test Scenarios (compatibility) |
+
+## 5. Backend architecture
+
+### Implementation layout
+
+```text
+backend/
+├── requirements.txt
+├── Dockerfile
+├── app/
+│   ├── main.py                # FastAPI endpoints and execution coordination
+│   ├── catalog.py             # Seven use cases and question definitions
+│   ├── scenarios.py           # Five references per use case, agreement rules
+│   ├── pricing.py             # SQLite rate registry and cost estimates
+│   └── providers/
+│       ├── jev.py             # System One Choice / Score / Noul adapter
+│       └── claude.py          # Anthropic forced-tool / generative adapter
+└── tests/                     # API, adapters, scoring, pricing tests
+```
+
+`main.py` validates inbound requests with Pydantic and orchestrates the selected provider adapters concurrently for each execution. It then attaches latency, usage-based estimates and reference comparison results. For an unsupported operation (Jev on UC4), the response explicitly reports `unsupported`, rather than pretending the model has generated a document.
+
+### Provider execution
+
+**Jev:** `AsyncTypeSafeClient.system_one(state=..., questions=...)` receives an input state and explicitly typed questions. Choice returns a selected option, Score a continuous value and Noul a proposition assessment. UC7 sends three questions—`priority`, `security_risk`, `team`—in **one System One request**.
+
+**Claude:** `AsyncAnthropic.messages.create(...)` handles both decision use cases and generative architecture work. Decisions force a `submit_decision` tool call with a validated schema. UC7 returns the same three named fields in one Anthropic request. UC4 instead returns free-form Markdown content.
+
+**Request equivalence:** each provider receives the same incident/task input and analogous decision constraints. Jev and Claude retain their different native semantics and tokenization; identical token counts should not be assumed.
+
+### HTTP endpoints
+
+| Endpoint | Method | Responsibility |
 | --- | --- | --- |
-| `app.component.ts` | Composición del shell y outlet | Implementar los cuatro casos de uso |
-| `features/*/*.page.ts` | Coordinar la pantalla, navegación y eventos | Llamadas HTTP directas o cálculos de benchmark |
-| `features/*/components/` | Renderizar partes pequeñas, emitir interacciones | Conocer credenciales o endpoints |
-| `features/playground/use-cases/` | Formularios y presentación específicos de cada caso | Duplicar componentes comunes o invocar proveedores |
-| `services/*-api.service.ts` | Construir peticiones HTTP tipadas y devolver respuestas/observables | Gestionar lógica de negocio del backend o controlar el DOM |
-| `core/` | Configuración, interceptores y comportamiento global | Almacenar lógica específica de una feature |
-| `shared/` | UI y utilidades realmente transversales | Convertirse en un repositorio de todo |
+| `/api/health` | GET | Liveness |
+| `/api/use-cases` | GET | Use cases, criteria, supported providers and scenarios |
+| `/api/executions` | POST | Run a single input against selected providers |
+| `/api/executions` | GET | Recent execution history |
+| `/api/executions/{execution_id}` | GET | Individual execution details |
+| `/api/quality/{case_id}` | GET | Session-local agreement over latest scenario attempts |
+| `/api/pricing` | GET | Current editable pricing registry |
+| `/api/pricing/{provider}` | PUT | Update provider input/output prices |
 
-**Flujo recomendado:** página → servicio API → backend → respuesta tipada → estado local de la página → componentes de presentación.
+The execution request currently uses `useCaseId`, `input`, `providers`, and optional `scenarioId`. The response includes an execution ID, use-case and scenario metadata, a timestamp, and per-provider entries such as `status`, `value`, `raw`, `usage`, `latencyMs`, `correct`, and pricing metadata.
 
-Una feature puede introducir un pequeño **facade/state service** cuando varios componentes necesitan compartir estado o coordinar peticiones. No es obligatorio en todas las features.
+The API returns HTTP 200 when orchestration completes even if some provider entries have `status: error`; clients must inspect **individual provider statuses**. Errors are logged using sanitized categories instead of provider exception content.
 
-### 3.5 Capa `services/`: acceso a backend
+## 6. Scenarios, quality and reporting
 
-La frontera frontend/backend debe ser explícita:
+Each use case has five demonstration inputs in `scenarios.py`. Reference results are **illustrative** and should not be treated as expert-validated labels.
 
-- Usar `environment` o configuración runtime para la **URL base**, nunca URLs dispersas en componentes.
-- Definir modelos `request/response` tipados para cada endpoint.
-- Mantener llamadas HTTP exclusivamente en los servicios de API.
-- Normalizar errores de red y HTTP en un formato consumible por la UI.
-- Para benchmarks prolongados, usar un endpoint de inicio y otro de estado o **SSE** para progreso. Evitar mantener una única petición HTTP abierta de manera indefinida.
-- No enviar ni exponer API keys de proveedores en el navegador.
-- Compartir contratos mediante OpenAPI generado desde FastAPI cuando el backend exista; **preferir tipos TypeScript generados** si eso evita divergencias, sin introducir generación prematura.
+- **Choice:** exact label match.
+- **Score:** reference tolerance of ±0.5 to accommodate Jev's continuous scores.
+- **Noul:** compare proposition classification using threshold 0.5.
+- **Incident Triage:** correct only if priority, security-risk classification **and** responsible team all pass.
+- **Architecture Design:** no automatic correct/incorrect result; evaluate the generated artifact qualitatively.
 
-**Interfaz orientativa (contrato provisional, no implementado):**
+In **Playground**, a single edited input is run once against selected providers. In **Test Scenarios**, five predefined inputs are repeated 1–20 times. For example, 5 scenarios × 3 iterations = 15 rounds and 45 provider calls with Jev, Haiku and Sonnet selected.
 
-```ts
-export interface ExecuteUseCaseRequest {
-  useCaseId: 'model-routing' | 'lead-scoring' |
-             'semantic-guardrails' | 'architecture-design';
-  providerIds: string[];
-  input: Record<string, unknown>;
-}
+Test Scenarios computes a **batch-specific** report using only that page's collected executions: reference agreement, success/failure counts, average latency, total and average estimated cost, per-scenario responses, and relative Jev/Claude ratios. It does not mix older History runs into this aggregate. Stopping a test takes effect after the current request.
 
-export interface ProviderExecutionResult {
-  providerId: string;
-  status: 'success' | 'error';
-  output?: unknown;
-  latencyMs?: number;
-  estimatedCostUsd?: number;
-  error?: string;
-}
+The `/api/quality/{case_id}` endpoint has distinct semantics: it summarizes the **latest attempt per scenario/provider** currently present in backend memory. This is not the same as the Test Scenarios batch report.
 
-export interface ExecuteUseCaseResponse {
-  executionId: string;
-  results: ProviderExecutionResult[];
-}
+### Cost calculation
+
+Cost estimate = `(input_tokens × input_rate + output_tokens × output_rate) / 1,000,000`, using the rate applicable to the **actual model** and saved configuration. Results include rate source and revision, so estimates can be interpreted later. Unknown models or missing token usage return an unavailable estimate rather than a fabricated zero.
+
+The seeded rates are:
+
+| Provider/model | Input USD / million | Output USD / million |
+| --- | ---: | ---: |
+| Jev | 0.042 | 0 |
+| Claude Haiku 5.5 | 0.10 | 0.50 |
+| Claude Sonnet 5.5 | 2 | 10 |
+
+Haiku 5.5 has a separate published rate tier above 100,000 input tokens. The application uses that tier when the default published pricing is active; manually configured rates take precedence. The API persists pricing in SQLite under the `pricing-data` volume, but **individual executions are held in Python process memory**.
+
+Cost projections are estimates, not invoices. They do not incorporate all potential cache, batch, negotiated-rate or tax adjustments.
+
+## 7. Security, persistence and operational limits
+
+- Provider credentials are read server-side from environment variables. They must not be committed or emitted to frontend bundles.
+- The provider error handler avoids logging request bodies, provider response text or secrets.
+- **Pricing Settings has no authentication.** The PoC is intended for local use; do not expose these write endpoints to the public internet.
+- Execution history and scenario reports are **not durably stored**. Restarting the API clears the history, and refreshing Test Scenarios clears its current report.
+- Concurrent pricing updates and cross-session traceability are limited by the PoC architecture.
+- There is no production-grade rate limiting, user authentication, background job queue or cost budget enforcement. A repeated test can initiate real billable API calls.
+
+## 8. Testing and local development
+
+Run the entire stack:
+
+```bash
+cp .env.example .env
+# Edit .env with TYPESAFE_API_KEY and ANTHROPIC_API_KEY
+docker compose up -d --build
 ```
 
-El tipo `Record<string, unknown>` se utiliza aquí solo como **borrador transversal**; antes de implementar cada caso se crearán DTO específicos y validación de entrada para evitar propagar estructuras sin tipar.
+Frontend: `http://localhost:4200`; API docs: `http://localhost:8000/docs`.
 
-**Ejemplo de uso previsto:**
+Backend tests (outside Docker when pytest is not in the container runtime setup):
 
-```ts
-@Injectable({ providedIn: 'root' })
-export class ExecutionsApiService {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = inject(API_BASE_URL);
-
-  execute(request: ExecuteUseCaseRequest) {
-    return this.http.post<ExecuteUseCaseResponse>(
-      `${this.baseUrl}/executions`, request
-    );
-  }
-}
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q
 ```
 
-Este snippet ilustra responsabilidades y dependencia; no pretende fijar todavía el contrato REST definitivo.
+Angular build:
 
-### 3.6 Navegación y estados de UI
+```bash
+cd frontend
+npm install
+npm run build
+```
 
-Rutas iniciales propuestas:
-- `/` — Dashboard, explicación y navegación a los cuatro casos.
-- `/playground/:useCaseId` — Editor, selección de proveedores y comparación de respuestas.
-- `/benchmarks` — Configuración e inicio de ejecuciones masivas.
-- `/benchmarks/:runId` — Progreso e indicadores del benchmark.
-- `/results/:executionId` — Inspección detallada de una ejecución.
+Test priorities: schema validation, choice/score/noul adapters, multi-decision answers, scenario scoring, price-tier changes, missing pricing data, API failures and UI load/error states. Provider integrations should be mocked in automated tests; live API calls should be explicit, limited smoke checks.
 
-Cada pantalla que invoque el backend debe contemplar **idle, loading, success, empty y error**. Evitar que los errores desaparezcan silenciosamente o que un resultado parcial parezca una ejecución completa.
+**Validation note:** the architectural description reflects repository code; a successful Docker build and end-to-end live-provider verification must be established separately.
 
-### 3.7 Legibilidad y convenciones
+## 9. Pragmatic SDD and engineering conventions
 
-- Cada componente tendrá nombre y propósito claros, con archivos `.ts`, `.html` y `.scss` separados cuando el template deje de ser trivial.
-- Evitar grandes templates inline, condicionales anidados y métodos extensos que mezclen renderizado, transformación de datos y API.
-- Nombres de componentes y servicios en inglés; comentarios para explicar el **porqué**, no repetir el código.
-- Mantener la lógica de dominio/normalización en funciones puras o servicios claramente identificados.
-- Aplicar lint y formato automáticos. No obsesionarse con tamaños fijos de archivos: **dividir cuando aparecen responsabilidades diferentes**.
-- No introducir una clase base, repositorio genérico ni framework de estado por cada feature sin necesidad real.
+For nontrivial changes, capture a brief living specification covering **purpose, inputs/outputs, UI states, API contracts, acceptance criteria and relevant tests**. Keep it alongside existing documentation when useful; do not create mandatory paperwork for small fixes.
 
-### 3.8 Testing frontend
+Prefer English identifiers and narrow, meaningful responsibilities. Refactor repeated logic only when it is genuinely shared. Keep the distinction between **observed values**, **calculated estimates** and **reference judgments** explicit in all API and UI outputs.
 
-**Mínimos:**
-- Unit tests de transformaciones/presentadores y validaciones no triviales.
-- Tests de componentes de formularios y estados (loading, error, results).
-- Tests de servicios API con respuestas HTTP simuladas (sin llamadas reales en CI).
-- E2E de apertura de la app, selección de caso, edición, ejecución simulada y visualización comparada.
-- Accesibilidad básica: etiquetas, foco, estados y teclado.
+### Architecture decision record
 
-Las pruebas de proveedores externos corresponden al backend; no se llaman desde los tests frontend.
-
-### 3.9 Decisiones diferidas
-
-No fijamos todavía:
-- Librería de componentes UI y librería de gráficas.
-- Versión exacta de Angular y librerías.
-- Contratos finales de endpoints/DTO, pendientes del diseño backend.
-- Necesidad de estado global, autenticación o despliegue público.
-
-Se resolverán cuando exista un caso concreto y se documentará brevemente el motivo.
-
-## 4. Arquitectura backend (pendiente)
-
-En una siguiente iteración se definirán FastAPI, adaptadores de Jev/Claude, evaluación, ejecución de benchmarks, almacenamiento, contratos OpenAPI y observabilidad. El frontend no asumirá detalles internos de esos componentes.
-
-## 5. Decisiones registradas
-
-| ID | Decisión | Estado |
+| ID | Decision | Status |
 | --- | --- | --- |
-| FE-001 | Arquitectura Angular **feature-first** y standalone components | Propuesta inicial |
-| FE-002 | `services/` como capa exclusiva de acceso a API | Propuesta inicial |
-| FE-003 | Estado local con signals; complejidad adicional solo cuando sea necesaria | Propuesta inicial |
-| FE-004 | Lazy routes y separación en páginas/componentes pequeños | Propuesta inicial |
-| FE-005 | Backend como responsable de claves, proveedores, costes y persistencia | Propuesta inicial |
-| FE-006 | Especificaciones breves y contratos explícitos (SDD pragmático) | Propuesta inicial |
+| FE-001 | Feature-first Angular layout with standalone components and lazy routes | Implemented |
+| FE-002 | Typed API services between feature pages and FastAPI | Partially implemented (Pricing page directly uses HttpClient) |
+| FE-003 | Local signals and component state; no unnecessary global store | Implemented |
+| FE-004 | Small components and dedicated templates for nontrivial views | Implemented, with remaining large-page refactoring opportunities |
+| BE-001 | FastAPI orchestrates provider adapters and protects API keys | Implemented |
+| BE-002 | Jev Choice/Score/Noul, including multiple questions in one call | Implemented |
+| BE-003 | Claude uses forced tool outputs for bounded decisions | Implemented |
+| DATA-001 | In-memory execution history; SQLite for editable pricing only | Implemented PoC limitation |
+| QA-001 | Five illustrative scenarios per case and transparent reference agreement | Implemented |
+| SDD-001 | Short, living specifications and tests over rigid ceremony | Adopted |
 
-Cuando se revise una decisión, se actualizará esta tabla y su apartado correspondiente, evitando documentación paralela contradictoria.
+Update this document when a decision, boundary, or persisted contract changes. Avoid contradictory parallel specifications.
