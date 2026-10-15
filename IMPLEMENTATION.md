@@ -2,7 +2,7 @@
 
 Implemented:
 - Angular responsive dashboard with routes and functional feature folders.
-- Live Playground for the 6 defined use cases, including input editing, provider selection and results.
+- Live Playground for the 7 defined use cases, including input editing, provider selection and results.
 - FastAPI typed catalog/execution endpoints and adapter separation.
 - Jev Choice/Score/Noul, Anthropic Claude.
 - Docker Compose, basic backend tests, in-memory execution history and safe server-only API credentials.
@@ -56,3 +56,7 @@ Use `pytest -q` from `backend` to execute the new scenario and quality tests; An
 ## Dedicated Test Scenarios UI
 
 The old placeholder Benchmarks navigation was replaced by `/test-scenarios`. Playground now handles one isolated run only. Test Scenarios offers 5 fixed scenarios, 1–20 iterations, Jev/Haiku/Sonnet selection, predicted request count, sequential rounds, stopping after an in-flight round, and an isolated per-batch result report: matched/evaluated and provider failures, average latency, total estimated and per-call cost, Jev/Claude ratios, and detailed outcomes for all five scenarios. A batch of 5 scenarios × 3 iterations runs 15 rounds and 45 provider calls when all three are selected. It can incur real API charges. Results are not durable after page navigation or refresh. The `/benchmarks` URL redirects to the new view.
+
+## UC7 — Incident Triage (multi-question)
+
+Jev now evaluates a Score (incident priority), a Noul (security risk), and a Choice (owning team) together in one System One request. Claude Haiku/Sonnet use one forced three-field tool result for parity. Playground shows all three fields; Test Scenarios provides five examples with exact team agreement, priority tolerance ±0.5 and security threshold 0.5. The reference outcome is considered a match only if all three pass. Added mocked contract and endpoint tests. User-facing project documentation is in README.md.
