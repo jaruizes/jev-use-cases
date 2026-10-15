@@ -1,0 +1,28 @@
+<span class="eyebrow">CONFIGURATION · TOKEN PRICING</span>
+<h1>Pricing <em>settings.</em></h1>
+<p class="muted">View and edit the token rates used to estimate execution costs. Rates are expressed in USD per million tokens, and saved on this local installation.</p>
+@if (error()) { <div class="alert">{{ error() }}</div> }
+@if (success()) { <div class="pricing-success">{{ success() }}</div> }
+@if (loading()) { <p>Loading pricing settings…</p> }
+<div class="pricing-grid">
+  @for (rate of prices(); track rate.provider) {
+    <section class="panel pricing-card">
+      <div class="card-top">
+        <h2>{{ rate.provider.toUpperCase() }}</h2>
+        <span class="tag">{{ rate.model }}</span>
+      </div>
+      <label class="field-label" [for]="'input-'+rate.provider">INPUT PRICE · USD / MTOK</label>
+      <input [id]="'input-'+rate.provider" type="number" step="any" min="0" max="100000"
+             [(ngModel)]="rate.inputUsdPerMillion" />
+      <label class="field-label" [for]="'output-'+rate.provider">OUTPUT PRICE · USD / MTOK</label>
+      <input [id]="'output-'+rate.provider" type="number" step="any" min="0" max="100000"
+             [(ngModel)]="rate.outputUsdPerMillion" />
+      <p class="note">Rate source: {{ rate.source }}</p>
+      <p class="note">Last saved: {{ rate.updatedAt }}</p>
+      <button class="button run" [disabled]="!!saving()" (click)="save(rate)">
+        {{ saving() === rate.provider ? 'Saving…' : 'Save pricing' }}
+      </button>
+    </section>
+  }
+</div>
+<p class="note">Only future executions use updated rates. Previous cost estimates are not recalculated. Default Haiku 5.5 pricing applies to prompts up to 100k input tokens; the official higher tier is automatically used for longer prompts while the source rate remains unchanged. Edited rates override that default rule. Cached input, batch discounts and actual invoicing are not included.</p>

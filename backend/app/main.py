@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from .catalog import CASES, BY_ID, public_case
 from .providers import claude, jev
-from .pricing import estimate
+from .pricing import estimate, list_prices, change_price
 from .scenarios import reference, assess, public_scenarios
 
 logger = logging.getLogger("jev_decision_lab")
@@ -122,3 +122,18 @@ def quality(case_id: str):
         summary.append({"provider": provider, "correct": correct, "total": len(evaluated),
                         "accuracyPercent": round(correct / len(evaluated) * 100, 1) if evaluated else None})
     return {"useCaseId": case_id, "results": summary, "referenceType": "illustrative"}
+
+class PriceUpdate(BaseModel):
+    inputUsdPerMillion: float = Field(ge=0, le=100000, allow_inf_nan=False)
+    outputUsdPerMillion: float = Field(ge=0, le=100000, allow_inf_nan=False)
+
+@app.get("/api/pricing")
+def get_pricing():
+    return list_prices()
+
+@app.put("/api/pricing/{provider}")
+def put_pricing(provider: str, body: PriceUpdate):
+    try:
+        return change_price(provider, body.inputUsdPerMillion, body.outputUsdPerMillion)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc

@@ -76,7 +76,7 @@ async def evaluate(case, text: str, provider: str) -> dict:
     if not os.getenv("ANTHROPIC_API_KEY"):
         raise ValueError("ANTHROPIC_API_KEY is not configured")
     env_name = "CLAUDE_HAIKU_MODEL" if provider == "haiku" else "CLAUDE_SONNET_MODEL"
-    model = os.getenv(env_name, "claude-haiku-4-5" if provider == "haiku" else "claude-sonnet-4-5")
+    model = os.getenv(env_name, "claude-haiku-5-5" if provider == "haiku" else "claude-sonnet-5-5")
     kwargs = {
         "model": model,
         "max_tokens": 1600 if case.kind == "generation" else 512,

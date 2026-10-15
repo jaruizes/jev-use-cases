@@ -8,6 +8,8 @@ services:
       CORS_ORIGINS: http://localhost:4200
     ports:
       - "8000:8000"
+    volumes:
+      - pricing-data:/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 10s
@@ -20,3 +22,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+volumes:
+  pricing-data:
