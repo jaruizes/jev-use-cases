@@ -5,7 +5,7 @@ from app.scenarios import SCENARIOS, public_scenarios, reference, assess
 client = TestClient(app)
 
 def test_five_scenarios_for_each_use_case():
-    assert len(SCENARIOS) == 6
+    assert len(SCENARIOS) == 7
     assert all(len(items) == 5 for items in SCENARIOS.values())
     catalog = client.get("/api/use-cases").json()
     assert all(len(item["scenarios"]) == 5 for item in catalog)

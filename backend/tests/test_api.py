@@ -2,11 +2,12 @@ from fastapi.testclient import TestClient
 from app.main import app
 client = TestClient(app)
 
-def test_catalog_contains_six_cases():
+def test_catalog_contains_seven_cases():
     response = client.get("/api/use-cases")
     assert response.status_code == 200
     cases = {c["id"]: c for c in response.json()}
-    assert len(cases) == 6
+    assert len(cases) == 7
+    assert cases["incident-triage"]["kind"] == "multi"
     assert cases["email-classification"]["kind"] == "choice"
     assert cases["incident-prioritization"]["kind"] == "score"
     assert "BILLING" in cases["email-classification"]["criteria"]

@@ -92,8 +92,9 @@
       <h2>What happened in each scenario?</h2>
       @for (detail of details(); track detail.scenario.id) {
         <details class="scenario-detail" open>
-          <summary>{{ detail.scenario.title }} <span>Expected: {{ detail.scenario.expected ?? 'Manual review' }}</span></summary>
+          <summary>{{ detail.scenario.title }} <span>Expected: {{ detail.scenario.expected == null ? 'Manual review' : (selected?.kind === 'multi' ? 'see JSON below' : detail.scenario.expected) }}</span></summary>
           <p class="muted small">{{ detail.scenario.input }}</p>
+          @if (selected?.kind === 'multi') { <pre class="small">Expected: {{ detail.scenario.expected | json }}</pre> }
           <div class="detail-grid">
             @for (value of detail.values; track value.provider) {
               <div class="detail-provider">

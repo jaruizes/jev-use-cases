@@ -2,244 +2,227 @@
 
 > **When should you use Jev instead of a generative LLM?**
 
-A visual, reproducible proof of concept (PoC) to compare **Jev**, **Claude Haiku**, **Claude Sonnet** and **deterministic rules**, highlighting where structured decisions win on quality, latency or cost, and where an LLM is essential.
+Jev Decision Lab is an interactive proof of concept comparing **TypeSafe Jev** with **Claude Haiku** and **Claude Sonnet** in realistic decision workflows. It measures the actual provider responses and latency, estimates their token costs, and lets you explore cases in which a generative model is required instead.
 
-**Status:** v0.1 Playground implemented (Angular + FastAPI). The bulk benchmark runner, reference datasets, and persistence are planned. M1 provides estimated per-request costs and cost/1,000 projections (not invoices). This project does not assume that Jev will win any benchmark. See [implementation status](IMPLEMENTATION.md).
+The objective is to understand the **different roles of semantic decision models and generative LLMs**, not to assume that Jev always wins.
 
-## Goals
+## Jev and System One: the concepts
 
-- Show when deterministic rules, Jev or generative LLMs are the appropriate tools.
-- Run the same decision scenarios against Jev and Claude with comparable information and scoring rubrics.
-- Evaluate **quality, p50/p95 latency, cost, reliability and consistency**, including high-impact mistakes.
-- Make everything explorable via a visual application, with editable inputs and real API executions.
-- Publish reproducible results, not cherry-picked comparisons.
+With a general-purpose LLM, a user typically supplies instructions and context, and the model produces content. For a business workflow, developers often constrain that output using a schema or a tool call and validate the returned fields.
 
-## Use cases
+With **Jev (System One)**, the request is explicitly structured around **bounded semantic questions**. The application sends the context as `state` and defines the decisions to make in `questions`.
 
-| ID | Use case | Domain | Capability | Key question |
-| --- | --- | --- | --- | --- |
-| UC1 | Intelligent Model Routing | AI/software engineering | Jev **Choice** | Which Claude model should handle this task? |
-| UC2 | Intelligent Lead Scoring | B2B sales | Jev **Score** | How promising is this commercial opportunity? |
-| UC3 | Semantic Guardrails | Agent governance | Jev **Noul** | Does this request semantically violate a policy? |
-| UC5 | Email Classification | Business operations | Jev **Choice** | Where should an email be routed? |
-| UC6 | Incident Prioritization | Operations | Jev **Score** | How urgent is the incident? |
-| UC4 | Architecture Decision & Planning | Software architecture | **Generative LLM** | How do we design and explain a complex solution? |
+| Jev primitive | Meaning | Typical output | Example in this project |
+| --- | --- | --- | --- |
+| **Choice** | Choose among declared options | One of the defined alternatives | Route a software task or classify an email |
+| **Score** | Assess against an ordered rubric | Continuous score | Prioritize a B2B lead or an incident |
+| **Noul** | Assess support for a yes/no proposition | Number between 0 and 1 | Detect a request to bypass approval or a security-risk signal |
+| **Multiple questions** | Evaluate several bounded decisions over the same context | A structured collection of Choice, Score and Noul answers | Incident Triage |
 
-Five are **candidate Jev use cases**, not predetermined victories.
+A `Noul` value is a **model assessment**, not a certified probability of truth or permission to perform an action. Thresholding requires domain-specific validation. Scores and choices similarly require application-side policy, business review and (where appropriate) human approval.
 
-### UC1 — Intelligent Model Routing (Choice)
+### How invoking Jev differs from invoking Claude
 
-Given a software engineering request, choose between **HAIKU**, **SONNET**, **OPUS** or **NEEDS_MORE_CONTEXT**, using explicit descriptions of each route.
+A Jev request is explicitly defined by its input context and one or more typed questions:
 
-**Example:** “Add an optional status filter to an existing Spring Boot REST endpoint, including tests.”
+```python
+response = await client.system_one(
+    state=incident_description,
+    questions={
+        "priority": Score(
+            instructions="Assess operational priority from 0 to 4.",
+            criteria=[
+                "Informational", "Low", "Moderate", "High", "Critical"
+            ],
+        ),
+        "security_risk": Noul(
+            instructions="Is there evidence of a cybersecurity or data-security risk?"
+        ),
+        "team": Choice(
+            instructions="Select the primary incident response team.",
+            criteria={
+                "PLATFORM": "Infrastructure and shared platform.",
+                "BACKEND": "Business APIs, application and database behavior.",
+                "SECURITY": "Cybersecurity threats or exposure.",
+            },
+        ),
+    },
+)
 
-The UI lets the user edit the task, choose the evaluators (Jev / Haiku / Sonnet), inspect each selected route and compare timing, quality and cost.
-
-**Dataset:** CRUD requests, documentation, refactoring, security-sensitive changes, distributed transactions and ambiguous work.
-
-**Evaluation:** agreement with expert-reviewed labels, cost, latency, **under-routing** (choosing a model too weak) and **over-routing** (unnecessary expenditure). Where feasible, actually execute a subset of tasks on the selected model to validate end-to-end success and cost.
-
-### UC2 — Intelligent Lead Scoring (Score)
-
-Score B2B sales opportunities on a **0–4** priority scale using structured CRM attributes and natural-language descriptions.
-
-**Example:** “The customer has approved a €250,000 budget, involved the CTO, shortlisted three vendors, and expects to start next quarter.”
-
-| Score | Interpretation |
-| --- | --- |
-| 0 | No credible opportunity identified |
-| 1 | Early interest, no approved budget or timeline |
-| 2 | Need identified, weak purchasing readiness |
-| 3 | Qualified opportunity with buying intent |
-| 4 | Approved budget, decision makers and near-term timeline |
-
-The UI offers editable fields, preset lead profiles and side-by-side score comparisons.
-
-**Dataset:** strong opportunities, early-stage leads, incomplete data and conflicting buying signals.
-
-**Evaluation:** error against independently reviewed scores, recall for high-priority cases, consistency, latency and cost. Compare with a deterministic baseline. **A priority score is not a calibrated conversion probability**; predicting conversion requires actual historical outcomes.
-
-### UC3 — Semantic Guardrails (Noul)
-
-Evaluate natural-language propositions such as:
-
-> Does this instruction request a production deployment without human approval?
-
-Examples should include explicit attempts to bypass approval, compliant deployment requests, paraphrases and ambiguous language. Show the returned numerical assessment, configured threshold and final decision.
-
-**Evaluation:** false positives, false negatives, threshold sensitivity, cost and latency. Document when to escalate uncertainty to a human or LLM.
-
-**Important:** semantic evaluation is an additional signal, **not an authorization mechanism**. Actual approvals and permissions must be enforced with deterministic server-side controls.
-
-### UC4 — Architecture Decision & Planning (Generative LLM required)
-
-A Java/PostgreSQL insurance monolith covers policies, payments and claims. Ask for a target architecture and phased migration plan while preserving consistency, failure resilience and service continuity.
-
-The system must **identify architectural issues, propose alternatives, discuss trade-offs, select integration patterns and generate a written migration plan**.
-
-This is deliberately an open-ended reasoning/generation task. Jev's bounded choice/score/evaluation interface cannot independently create the required design artifact. The UI should explain that limitation rather than present an unfair “Jev failed” latency comparison. Claude's outputs should be assessed against an architectural review rubric.
-
-**Optional hybrid demonstration:** after Claude generates candidate designs, Jev evaluates a predefined criterion across those options. This does not imply Jev generated or reasoned through the entire architecture.
-
-## Visual experience — Jev Decision Lab
-
-The application will have two modes:
-
-### Playground
-
-1. Choose one of the six use cases.
-2. Load a representative example or edit input data and semantic criteria.
-3. Select providers: Jev, Claude Haiku and Claude Sonnet.
-4. Execute real calls using backend-protected API credentials.
-5. View results side by side: decision, raw output, duration, estimated cost, confidence/score when available, API errors and expected answer.
-6. Repeat the experiment or try ambiguous/edge-case examples.
-
-For UC4, display the generated proposal as readable Markdown, not merely raw JSON.
-
-### Test Scenarios
-
-- Select versioned datasets, providers and repetitions.
-- Preview projected call counts and configure cost/request limits.
-- Track progress, errors and completed runs.
-- Compare **accuracy/weighted errors**, **p50/p95 latency**, **cost per 1,000 decisions**, consistency and critical-error rates.
-- Filter by use case, provider, run and input category.
-- Inspect individual failed cases and export CSV or JSON.
-- Preserve model versions, prompts, pricing assumptions and timestamps for reproducibility.
-
-**No hard-coded winner badges or invented numbers.** The UI should distinguish expected values, measured values and estimates.
-
-## Architecture
-
-```text
-                 Angular frontend
-          Home · Playground · Benchmarks · Results
-                           |
-                      REST / SSE
-                           |
-                   FastAPI backend
-             Orchestration · Evaluation · Metrics
-                           |
-           +---------------+---------------+
-           |               |               |
-      Jev adapter     Claude adapter    Rule engine
-           |               |               |
-       TypeSafe API     Anthropic API    Local code
-                           |
-                       SQLite DB
-                  Run and result history
+priority = response.scores["priority"].score
+security_risk = response.nouls["security_risk"].noul
+team = response.choices["team"].choice
 ```
 
-- **Frontend:** Angular, reusable controls and charts, responsive layout and feature-based components.
-- **Backend:** Python + FastAPI, typed contracts, provider adapters and a reusable benchmark runner.
-- **Persistence:** SQLite for local execution history; JSONL for curated, versioned input datasets.
-- **Testing:** unit, provider contract and mocked integration tests; UI smoke tests.
-- **Local launch target:** Docker Compose.
+**One Jev API call** evaluates all three questions against the same context. This is not three successive calls, and the output is not an architecture document or free-form prose.
 
-**Security:** API keys must stay in backend environment variables, never in Angular bundles or the repository.
+For a **fair comparison**, the Claude adapter also uses **one API call** for Incident Triage and forces a structured tool response containing all three fields. Claude can therefore produce typed responses too: **structured output is not exclusive to Jev**. The key distinction is that Jev exposes bounded semantic questions as its native task interface, whereas Claude is a general-purpose generative model constrained for this experiment.
 
-### Target repository layout
+### Where each approach fits
 
-```text
-jev-use-cases/
-├── frontend/
-│   └── src/app/
-│       ├── core/
-│       ├── shared/
-│       └── features/
-│           ├── dashboard/
-│           ├── playground/
-│           ├── benchmarks/
-│           └── results/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   ├── providers/
-│   │   ├── use_cases/
-│   │   ├── benchmark/
-│   │   └── persistence/
-│   └── tests/
-├── datasets/
-│   ├── model-routing/
-│   ├── lead-scoring/
-│   ├── semantic-guardrails/
-│   └── architecture-design/
-├── docs/
-├── docker-compose.yml
-└── README.md
+- **Jev:** classification, prioritization, proposition evaluation and combinations of these decisions.
+- **Claude Haiku/Sonnet:** the same decisions using structured tool responses, plus open-ended reasoning, writing and design.
+- **Generative-only example:** designing an architecture and explaining alternatives and a migration plan cannot be fulfilled through Jev's Choice/Score/Noul interface alone.
+
+For real systems, a semantic risk assessment is not an authorization control. Explicit permissions and approvals still need deterministic enforcement.
+
+## Use cases and examples
+
+Each use case has one editable Playground input and **five predefined demonstration scenarios** available in **Test Scenarios**.
+
+| ID | Use case | Jev capability | Five example scenarios |
+| --- | --- | --- | --- |
+| UC1 | Intelligent Model Routing | Choice | Simple endpoint change; complex refactor; distributed consistency; missing context; documentation |
+| UC2 | Intelligent Lead Scoring | Score (0–4) | Ready to buy; early interest; no opportunity; need without purchase plan; qualified deal |
+| UC3 | Semantic Guardrails | Noul (0–1) | Explicit approval bypass; compliant approval; synonymous bypass; staging-only; negated bypass |
+| UC4 | Architecture Decision & Planning | Generative LLM only | Insurance migration; retail events; healthcare; multi-tenant SaaS; legacy data migration |
+| UC5 | Email Classification | Choice | Invoice dispute; sales inquiry; technical support; unsolicited offer; general message |
+| UC6 | Incident Prioritization | Score (0–4) | Critical outage; high impact; moderate degradation; minor issue; informational |
+| UC7 | **Incident Triage · Multi-decision** | **Score + Noul + Choice in one request** | Payment outage; credential exposure; cluster degradation; minor API bug; phishing with confirmed access |
+
+### UC7: Incident Triage in detail
+
+Given an operational incident, Jev answers the following questions **at once**:
+
+1. **Priority** — a 0–4 score for business impact and urgency.
+2. **Security risk** — a Noul value (0–1) estimating support for the security-risk proposition.
+3. **Responsible team** — a Choice between `PLATFORM`, `BACKEND` and `SECURITY`.
+
+For example, a payment API outage caused by database connection pool exhaustion has the illustrative reference `{ "priority": 4, "security_risk": 0, "team": "BACKEND" }`. This is a test reference, **not** a claim that any model will necessarily return those values.
+
+Claude Haiku and Sonnet are given an equivalent three-field tool schema. The UI renders each result separately and compares time, costs and agreement with each reference. The reference decision counts as a match only if **all three fields** meet their individual checks: priority within ±0.5, security risk thresholded at 0.5, and exact team choice. This strict, all-or-nothing measure is only for this demo.
+
+For UC4, Jev is not invoked to generate an architecture: this case explicitly illustrates when a generative LLM is needed. Its outputs require qualitative review rather than automatic accuracy scoring.
+
+## Using the application
+
+### Playground — a single execution
+
+Select one use case, edit or replace the provided input, choose Jev/Haiku/Sonnet where supported, and click **Run comparison**. Each provider receives equivalent context, and the UI displays:
+
+- Structured decisions or generated text, raw responses and error details.
+- Measured latency, provider-reported tokens and estimated USD costs.
+- Projected costs per 1,000 equivalent decisions and Jev/Claude cost and latency ratios, where measurable.
+
+This is an **isolated experiment**, not an aggregate accuracy measurement.
+
+### Test Scenarios — repeated scenarios
+
+Select a use case and the providers, then configure **1–20 iterations per scenario**. Every case has five scenarios, so **5 scenarios × 3 iterations = 15 rounds**, or **45 billable provider calls** when three providers are selected.
+
+After execution, the UI reports:
+
+- Reference agreement (correct responses / evaluated responses) and provider failures.
+- Mean latency, estimated total and average costs, and Jev/Claude ratios.
+- A per-scenario breakdown showing the actual responses and mismatches.
+
+References are **illustrative**, not independently verified ground truth. A Score matches its reference within ±0.5; a Noul is evaluated using a 0.5 threshold; UC7 requires all three fields to match. UC4 has no numerical accuracy score. These metrics demonstrate the mechanics of evaluation, not a generalized claim of model accuracy.
+
+History and reports are currently held in memory (backend process and current browser page, respectively); they are not persistent across restarts/refreshes.
+
+## Build and run locally
+
+### Requirements
+
+- **Docker Engine / Docker Desktop** with Docker Compose v2.
+- **TypeSafe API key** and **Anthropic API key** for live comparisons.
+- Network connectivity to both provider APIs. Live requests can incur charges.
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/jaruizes/jev-use-cases.git
+cd jev-use-cases
 ```
 
-The layout is a **plan**, not a representation of existing files.
+### 2. Configure environment variables
 
-## Benchmark methodology
-
-1. Define scoring rules and expert-reviewed ground truth before evaluating models.
-2. Use equivalent context, alternatives and constraints for each evaluated provider.
-3. Include at least a deterministic baseline for tasks that admit explicit rules.
-4. Use diverse datasets, including ambiguity, contradictions, near-misses and insufficient context.
-5. Repeat requests and interleave provider order to reduce sequencing bias.
-6. Measure end-to-end latency, failures and retries. Report p50/p95 rather than just averages.
-7. Distinguish provider-reported usage/charges from cost estimates based on documented pricing.
-8. Measure critical errors independently, especially under-routing and guardrail false negatives.
-9. Record versions, configurations, datasets, rubric and limitations with each benchmark.
-10. Evaluate UC4 separately: judge reasoning and generated artifacts, not impossible structured-output parity.
-
-**Initial target:** 100 labelled cases each for UC1–UC3, approximately 5 repetitions per case and provider; a smaller qualitatively reviewed corpus for UC4. Counts and budget limits should be configurable.
-
-Suggested acceptance criteria must be **configurable and validated against real results**: minimum decision quality, maximum critical-error rate and material cost/latency improvement compared with a relevant Claude baseline.
-
-## Planned milestones
-
-1. **Foundation:** Angular shell, FastAPI, configuration, adapters and Docker Compose.
-2. **Playground:** four working use cases, editable examples, provider comparison and raw responses.
-3. **Evaluation:** labelled datasets, deterministic controls and use-case-specific metrics.
-4. **Benchmark mode:** repeatable runs, progress, persistence, reporting and exports.
-5. **Demo readiness:** guided walkthrough, documented findings and reproducible example runs.
-
-## Getting started (planned)
-
-**Playground implemented:** start Angular and FastAPI locally with Docker Compose:
+Create a local `.env` file from the example:
 
 ```bash
 cp .env.example .env
-# Set TYPESAFE_API_KEY and ANTHROPIC_API_KEY in .env
-docker compose up --build
 ```
 
-This README will be updated with verified startup commands and actual model/SDK identifiers when implementation lands.
+Edit `.env` with your own credentials:
+
+```dotenv
+TYPESAFE_API_KEY=your-typesafe-key
+ANTHROPIC_API_KEY=your-anthropic-key
+CLAUDE_HAIKU_MODEL=claude-haiku-4-5
+CLAUDE_SONNET_MODEL=claude-sonnet-4-5
+CORS_ORIGINS=http://localhost:4200
+
+# Optional Jev pricing override, USD per million input tokens:
+# JEV_INPUT_USD_PER_MTOK=0.042
+```
+
+Never commit `.env` or put credentials in Angular code. The keys are only passed to the backend.
+
+### 3. Build and start
+
+```bash
+docker compose up --build -d
+```
+
+The application is available at:
+
+| Service | URL |
+| --- | --- |
+| Angular UI | http://localhost:4200 |
+| API documentation (Swagger) | http://localhost:8000/docs |
+| API health | http://localhost:8000/api/health |
+| Playground: Incident Triage | http://localhost:4200/playground/incident-triage |
+| Test Scenarios | http://localhost:4200/test-scenarios |
+
+### 4. Inspect logs and stop
+
+```bash
+docker compose logs -f api frontend
+docker compose down
+```
+
+After changing `.env`, recreate the API container:
+
+```bash
+docker compose up -d --force-recreate api
+```
+
+### 5. Run tests
+
+Run the backend tests from your local Python environment:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q
+```
+
+The frontend can be built separately using Node.js/npm:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+## Costs and interpretation
+
+Estimates are based on reported tokens, a versioned price table and the configured API model. The currently configured rates are:
+
+| Provider/model | USD per 1M input tokens | USD per 1M output tokens |
+| --- | ---: | ---: |
+| Jev | 0.042 | 0 |
+| Claude Haiku 4.5 | 1 | 5 |
+| Claude Sonnet 4.5 | 3 | 15 |
+
+The Jev list price comes from [TypeSafe's System One announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). Claude model rates come from [Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5) and [Sonnet 4.5](https://www.anthropic.com/news/claude-sonnet-4-5). These are **estimates**, not invoices; they exclude negotiated terms, taxes, caching and batch effects.
+
+The value of this project is showing the **boundary between bounded semantic decisions and open-ended generation**, along with measured behavior on specific examples — not asserting that one model universally outperforms another.
 
 ## References
 
-- [TypeSafe — Coding Agents](https://docs.typesafe.ai/introduction/coding-agents)
+- [TypeSafe — Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
 - [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
 - [Anthropic API documentation](https://docs.anthropic.com/)
-
-## Principle
-
-> **Use deterministic code for exact rules, Jev for bounded context-dependent decisions, and generative LLMs for open-ended reasoning or new artifact generation.**
-
-The goal is to **measure the boundary**, not assume it.
-
-## Additional decision use cases
-
-### UC5 — Email Classification (Choice)
-
-Classify an email into SALES, SUPPORT, BILLING, SPAM or OTHER from its subject and body. Compare Jev with Claude Haiku/Sonnet for ambiguous requests, such as messages that contain both a support issue and a refund request.
-
-### UC6 — Incident Prioritization (Score)
-
-Assign a priority from 0 (informational) to 4 (critical) based on business impact, affected customers, urgency, and workarounds. Compare Jev with Claude Haiku/Sonnet; scoring is an assessment and must not bypass formal incident-management escalation policies.
-
-**Playground provider selection:** only Jev, Claude Haiku and Claude Sonnet. UC4 explicitly highlights that Jev is not an LLM and cannot generate an open-ended architecture.
-
-## M1 — Cost Intelligence
-
-The Playground reports versioned **estimated** USD costs using provider-reported token usage. Claude Haiku 4.5 uses $1 input / $5 output per million tokens; Sonnet 4.5 uses $3 / $15. Jev defaults to the published TypeSafe list rate of $0.042 per million input tokens (output free), with optional override via `JEV_INPUT_USD_PER_MTOK`. See [TypeSafe's announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). No cost of $0 is invented. These figures do not include billing adjustments, cache/batch discounts, taxes, or volume changes.
-
-Sources: [Haiku 4.5 pricing](https://www.anthropic.com/news/claude-haiku-4-5) · [Sonnet 4.5 pricing](https://www.anthropic.com/news/claude-sonnet-4-5).
-
-## Two separate ways to run experiments
-
-- **Playground**: one ad hoc input and one comparison across selected providers. Includes direct cost and latency advantages.
-- **Test Scenarios** (`/test-scenarios`): five fixed examples for a selected use case, with 1–20 repetitions. The interface previews total calls (e.g. 5 scenarios × 3 repetitions × 3 providers = 45 API calls), shows live progress, aggregates success/error counts, reference agreement, average latency, estimated total cost and mean cost, plus detailed results by scenario. Stop ends after the current call. The report is specific to the batch, not earlier History executions.
-
-The reference labels are *illustrative*, not expert-validated. Accuracy means agreement with them; failures are reported independently. The architecture-generation case has no numeric reference accuracy. Results are held in browser memory for the current page session; the backend still stores individual execution history in process memory.

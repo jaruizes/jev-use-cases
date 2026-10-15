@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { UseCase, ProviderId, Execution, ProviderResult, Scenario } from '../../core/models';
@@ -28,7 +28,7 @@ interface Detail {
 
 @Component({
   standalone: true,
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule, DecimalPipe, JsonPipe],
   templateUrl: './test-scenarios.page.html',
 })
 export class TestScenariosPage {
