@@ -35,8 +35,8 @@ This release implements a Playground, not a validated benchmark; do not interpre
 
 ## M1 — Cost Intelligence
 
-Implemented: per-request estimated USD cost and projected cost per 1,000 equivalent calls, derived from provider-reported token usage; side-by-side cost bars in Playground; versioned standard rate lookup for Claude Haiku 4.5 and Sonnet 4.5; optional operator-configured Jev input-token rate. Unknown models, missing usage and unconfigured Jev pricing display N/A, **never $0**.
+Implemented: per-request estimated USD cost and projected cost per 1,000 equivalent calls, derived from provider-reported token usage; side-by-side cost bars in Playground; versioned standard rate lookup for Claude Haiku 4.5 and Sonnet 4.5; published Jev list price of $0.042 per million input tokens (output free), with an optional override. Unknown models and missing usage display N/A, **never $0**.
 
-To estimate Jev costs, set `JEV_INPUT_USD_PER_MTOK` in `.env` to your independently verified current TypeSafe input rate (USD per million tokens). The application assumes Jev output tokens are free under the configured plan. It does not assert this reflects the account invoice. Restart/recreate API after editing .env.
+By default Jev uses TypeSafe's published $0.042 per million input tokens and free output tokens ([official announcement, 2026-09-15](https://typesafe.ai/blog/introducing-system-one-models-and-jev)). Set `JEV_INPUT_USD_PER_MTOK` in `.env` only to override the published rate for a different agreement. Estimates are not actual invoices. Restart/recreate the API after editing .env.
 
 Not in M1: batch/caching tariffs, invoice reconciliation, benchmarking distributions, authoritative dataset assessment, persistence.

@@ -4,7 +4,7 @@ import os
 
 VERSION = "2026-10-15"
 # Rates correspond to the standard Anthropic API, without batch / cache discounts.
-# Jev rate is supplied by the operator: no automatic verified price available.
+# Jev published list price: $0.042 / MTok input, output free (TypeSafe, 2026-09-15).\nJEV_PRICE_SOURCE = "https://typesafe.ai/blog/introducing-system-one-models-and-jev"
 RATES = {
     "claude-haiku-4-5": ("1", "5", "https://www.anthropic.com/news/claude-haiku-4-5"),
     "claude-haiku-4-5-20251001": ("1", "5", "https://www.anthropic.com/news/claude-haiku-4-5"),
@@ -23,7 +23,7 @@ def _usage_counts(usage):
     if not isinstance(usage, dict):
         return None
     inp = _nonnegative(usage.get("input_tokens"))
-    out = _nonnegative(usage.get("output_tokens"))
+    out = _nonnegative(usage.get("output_tokens", 0))
     return (inp, out) if inp is not None and out is not None else None
 
 def estimate(provider, model, usage):
@@ -32,9 +32,7 @@ def estimate(provider, model, usage):
     if counts is None:
         return {"estimatedCostUsd": None, "costPer1000Usd": None, "pricingStatus": "missing_usage", "pricingVersion": VERSION}
     if provider == "jev":
-        configured = os.getenv("JEV_INPUT_USD_PER_MTOK", "").strip()
-        if not configured:
-            return {"estimatedCostUsd": None, "costPer1000Usd": None, "pricingStatus": "rate_not_configured", "pricingVersion": VERSION}
+        configured = os.getenv("JEV_INPUT_USD_PER_MTOK", "0.042").strip()
         try:
             rate_in = Decimal(configured)
             if not rate_in.is_finite() or rate_in < 0:
@@ -42,7 +40,7 @@ def estimate(provider, model, usage):
         except Exception:
             return {"estimatedCostUsd": None, "costPer1000Usd": None, "pricingStatus": "invalid_rate", "pricingVersion": VERSION}
         rate_out = Decimal("0")
-        source = "operator-configured"
+        source = "operator-configured" if "JEV_INPUT_USD_PER_MTOK" in os.environ else JEV_PRICE_SOURCE
     elif model in RATES:
         i, o, source = RATES[model]
         rate_in, rate_out = Decimal(i), Decimal(o)

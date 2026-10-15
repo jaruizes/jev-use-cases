@@ -233,6 +233,6 @@ Assign a priority from 0 (informational) to 4 (critical) based on business impac
 
 ## M1 — Cost Intelligence
 
-The Playground reports versioned **estimated** USD costs using provider-reported token usage. Claude Haiku 4.5 uses $1 input / $5 output per million tokens; Sonnet 4.5 uses $3 / $15. A Jev price must be supplied by the operator via `JEV_INPUT_USD_PER_MTOK` (USD per million input tokens); otherwise its cost is explicitly unavailable. No cost of $0 is invented. These figures do not include billing adjustments, cache/batch discounts, taxes, or volume changes.
+The Playground reports versioned **estimated** USD costs using provider-reported token usage. Claude Haiku 4.5 uses $1 input / $5 output per million tokens; Sonnet 4.5 uses $3 / $15. Jev defaults to the published TypeSafe list rate of $0.042 per million input tokens (output free), with optional override via `JEV_INPUT_USD_PER_MTOK`. See [TypeSafe's announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). No cost of $0 is invented. These figures do not include billing adjustments, cache/batch discounts, taxes, or volume changes.
 
 Sources: [Haiku 4.5 pricing](https://www.anthropic.com/news/claude-haiku-4-5) · [Sonnet 4.5 pricing](https://www.anthropic.com/news/claude-sonnet-4-5).

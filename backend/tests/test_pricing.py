@@ -22,9 +22,20 @@ def test_jev_custom_rate(monkeypatch):
     assert result["estimatedCostUsd"] == pytest.approx(0.000042)
     assert result["pricingSource"] == "operator-configured"
 
-def test_jev_without_rate(monkeypatch):
+def test_jev_published_default(monkeypatch):
     monkeypatch.delenv("JEV_INPUT_USD_PER_MTOK", raising=False)
-    assert estimate("jev", "jev-latest", {"input_tokens": 10, "output_tokens": 5})["estimatedCostUsd"] is None
+    result = estimate("jev", "jev-latest", {"input_tokens": 1000})
+    assert result["estimatedCostUsd"] == pytest.approx(0.000042)
+    assert "typesafe.ai/blog/" in result["pricingSource"]
+
+def test_jev_override(monkeypatch):
+    monkeypatch.setenv("JEV_INPUT_USD_PER_MTOK", "0.05")
+    result = estimate("jev", "jev-latest", {"input_tokens": 1000, "output_tokens": 0})
+    assert result["estimatedCostUsd"] == pytest.approx(0.00005)
+
+def test_jev_invalid_override(monkeypatch):
+    monkeypatch.setenv("JEV_INPUT_USD_PER_MTOK", "not-a-price")
+    assert estimate("jev", "jev-latest", {"input_tokens": 1000})["pricingStatus"] == "invalid_rate"
 
 def test_reject_negative_usage():
     assert estimate("haiku", "claude-haiku-4-5", {"input_tokens": -1, "output_tokens": 10})["pricingStatus"] == "missing_usage"
