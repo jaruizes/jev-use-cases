@@ -63,6 +63,11 @@
           @for (item of scoreEntries(current); track $index) {
             <div><strong>{{ $index }}</strong><span>{{ item }}</span></div>
           }
+        } @else if (current.kind === 'multi') {
+          <div><strong>Score</strong><span>Priority: 0–4</span></div>
+          <div><strong>Noul</strong><span>Cybersecurity risk: 0–1</span></div>
+          <div><strong>Choice</strong><span>Responsible team: PLATFORM / BACKEND / SECURITY</span></div>
+          <p class="note">All three questions are evaluated together in one provider request.</p>
         } @else if (current.kind === 'noul') {
           <div><strong>0…1</strong><span>Degree of support for the stated proposition</span></div>
         } @else {

@@ -164,7 +164,7 @@ export class TestScenariosPage {
           correct: evaluated.filter(r => r.correct === true).length,
           evaluated: evaluated.length,
           failed: results.length - successes.length,
-          responses: successes.map(r => String(r.value ?? '—')),
+          responses: successes.map(r => typeof r.value === 'object' && r.value != null ? JSON.stringify(r.value) : String(r.value ?? '—')),
           avgLatency: successes.length ?
             successes.reduce((sum,r)=>sum+r.latencyMs,0)/successes.length : null,
           avgCost: priced.length === successes.length && successes.length > 0 ?

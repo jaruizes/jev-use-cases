@@ -5,6 +5,29 @@ from anthropic import AsyncAnthropic
 
 def decision_schema(case) -> dict:
     """A forced tool call provides a typed decision rather than brittle text parsing."""
+    if case.kind == "multi":
+        properties = {
+            "priority": {"type": "integer", "minimum": 0, "maximum": 4},
+            "security_risk": {"type": "number", "minimum": 0, "maximum": 1},
+            "team": {"type": "string", "enum": list(case.criteria["team"])},
+        }
+        return {
+            "name": "submit_decision",
+            "description": "Submit all three decisions about the incident.",
+            "input_schema": {"type": "object", "properties": properties,
+                             "required": list(properties), "additionalProperties": False},
+        }
+    if case.kind == "multi":
+        if set(payload) != {"priority", "security_risk", "team"}:
+            raise ValueError("Missing or extra incident triage decisions")
+        priority, risk, team = payload["priority"], payload["security_risk"], payload["team"]
+        if type(priority) is not int or not 0 <= priority <= 4:
+            raise ValueError("Invalid triage priority")
+        if type(risk) not in (float, int) or not 0 <= risk <= 1:
+            raise ValueError("Invalid triage security probability")
+        if not isinstance(team, str) or team not in case.criteria["team"]:
+            raise ValueError("Invalid triage team")
+        return {"priority": priority, "security_risk": float(risk), "team": team}, payload
     if case.kind == "choice":
         value = {"type": "string", "enum": list(case.criteria.keys())}
     elif case.kind == "score":

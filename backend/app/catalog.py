@@ -70,6 +70,27 @@ CASES = [
         ],
     ),
     UseCase(
+        "incident-triage", "Incident Triage · Multi-decision", "multi",
+        "Classify priority, security risk and responsible team in a single request.",
+        "Production checkout is down for every customer. Payment API returns HTTP 503. No evidence of unauthorized access; payment service logs show database connection pool exhaustion.",
+        "Assess the same incident through three independent, bounded decisions: priority, security risk, and owning team.",
+        {
+            "priority": [
+                "Informational or cosmetic issue",
+                "Low impact with workaround",
+                "Moderate degradation",
+                "High impact to business workflows",
+                "Critical outage or severe data/security risk"
+            ],
+            "security_risk": "Is there evidence that the incident poses a cybersecurity or data-security risk?",
+            "team": {
+                "PLATFORM": "Infrastructure, orchestration, cluster and shared platform.",
+                "BACKEND": "Business APIs, application services, databases and application code.",
+                "SECURITY": "Security threats, unauthorized access, malicious activity and exposure."
+            }
+        },
+    ),
+    UseCase(
         "architecture-design", "Architecture Decision & Planning", "generation",
         "Develop an architecture and explain alternatives and trade-offs.",
         "A Java/PostgreSQL insurance monolith handles policies, payments and claims. Design a phased migration to services with strong consistency where needed, failure handling and minimal downtime.",

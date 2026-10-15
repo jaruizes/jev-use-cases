@@ -66,7 +66,9 @@ export class ProviderResultsComponent {
     }));
   }
 
-  isLongText(value: string | number | undefined): boolean {
+  isMultiResult(value: unknown): boolean { return value !== null && typeof value === 'object' && !Array.isArray(value); }
+
+  isLongText(value: string | number | Record<string, string | number> | undefined): boolean {
     return typeof value === 'string' && value.length > 120;
   }
 }

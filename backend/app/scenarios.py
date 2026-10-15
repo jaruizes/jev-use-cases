@@ -35,6 +35,13 @@ SCENARIOS = {
   ("i4","Minor issue","A small admin team sees an alignment problem on a settings form; their work continues through a workaround.",1),
   ("i5","Informational","A test environment dashboard icon is a slightly different shade; no functionality or users are impacted.",0),
  ],
+ "incident-triage": [
+  ("t1","Payment API outage","Production checkout is down for all customers, payment service logs show DB pool exhaustion. No sign of intrusion.",{"priority":4,"security_risk":0,"team":"BACKEND"}),
+  ("t2","Credential exposure","Audit logs confirm stolen admin credentials were used to access private customer data. Security team is investigating.",{"priority":4,"security_risk":1,"team":"SECURITY"}),
+  ("t3","Cluster degradation","Kubernetes workers are NotReady, several applications fail, and the shared ingress is intermittently unavailable.",{"priority":3,"security_risk":0,"team":"PLATFORM"}),
+  ("t4","Minor API bug","A small subset of users get a non-critical validation error in their profile settings API; a workaround exists.",{"priority":1,"security_risk":0,"team":"BACKEND"}),
+  ("t5","Phishing with evidence","A confirmed phishing campaign resulted in unauthorized access to production secrets; services still respond.",{"priority":4,"security_risk":1,"team":"SECURITY"}),
+ ],
  "architecture-design": [
   ("a1","Insurance migration","A Java/PostgreSQL insurance monolith handles policies, payments and claims. Plan a phased migration that minimizes downtime.",None),
   ("a2","Retail event architecture","Design an event-driven order lifecycle for retail with Kafka, outbox, idempotency and compensating actions.",None),
@@ -57,6 +64,15 @@ def reference(case_id, scenario_id, input_text):
 def assess(case_id, value, expected):
     if expected is None:
         return None
+    if case_id == "incident-triage":
+        if not isinstance(value, dict) or not isinstance(expected, dict):
+            return False
+        try:
+            return (abs(float(value["priority"]) - float(expected["priority"])) <= 0.5
+                    and (float(value["security_risk"]) >= 0.5) == bool(expected["security_risk"])
+                    and value["team"] == expected["team"])
+        except (KeyError, TypeError, ValueError):
+            return False
     if case_id in ("lead-scoring", "incident-prioritization"):
         return abs(float(value) - expected) <= 0.5
     if case_id == "semantic-guardrails":
