@@ -1,6 +1,12 @@
-import { Component, Input } from '@angular/core';
 import { DecimalPipe, JsonPipe } from '@angular/common';
+import { Component, Input } from '@angular/core';
 import { Execution } from '../../../core/models';
+
+interface CostComparison {
+  provider: string;
+  cost: number;
+  percent: number;
+}
 
 @Component({
   selector: 'app-provider-results',
@@ -12,30 +18,40 @@ export class ProviderResultsComponent {
   @Input({ required: true }) execution!: Execution;
 
   formatMoney(value: number | null | undefined): string {
-    return value === null || value === undefined ? 'N/A' : ' string | number | undefined): boolean {
-    return typeof value === 'string' && value.length > 120;
-  }
-}
- + value.toFixed(8);
+    return value == null ? 'N/A' : '$' + value.toFixed(8);
   }
 
   costMessage(status?: string): string {
-    if (status === 'rate_not_configured') return 'Jev rate not configured';
-    if (status === 'unknown_model') return 'No price for this model version';
-    if (status === 'missing_usage') return 'Usage not available';
-    return 'Cost unavailable';
+    switch (status) {
+      case 'rate_not_configured':
+        return 'Jev rate not configured';
+      case 'unknown_model':
+        return 'No price for this model version';
+      case 'missing_usage':
+        return 'Usage not available';
+      case 'invalid_rate':
+        return 'Invalid pricing configuration';
+      default:
+        return 'Cost unavailable';
+    }
   }
 
-  comparison(): {provider: string; cost: number; percent: number}[] | null {
+  comparison(): CostComparison[] | null {
     const eligible = this.execution.results.filter(
-      r => r.status === 'success' && r.estimatedCostUsd !== null &&
-           r.estimatedCostUsd !== undefined
+      result => result.status === 'success' &&
+        result.estimatedCostUsd != null
     );
-    if (eligible.length < 2) return null;
-    const max = Math.max(...eligible.map(r => r.estimatedCostUsd!));
-    return eligible.map(r => ({
-      provider: r.provider, cost: r.estimatedCostUsd!,
-      percent: max > 0 ? r.estimatedCostUsd! / max * 100 : 0,
+
+    if (eligible.length < 2) {
+      return null;
+    }
+
+    const maximum = Math.max(...eligible.map(result => result.estimatedCostUsd!));
+
+    return eligible.map(result => ({
+      provider: result.provider,
+      cost: result.estimatedCostUsd!,
+      percent: maximum > 0 ? (result.estimatedCostUsd! / maximum) * 100 : 0,
     }));
   }
 
