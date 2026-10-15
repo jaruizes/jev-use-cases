@@ -8,7 +8,7 @@ import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
             <aside class="sidebar"><a class="brand" routerLink="/"><span class="mark">J</span><span>Jev Decision Lab<small>AI DECISION ENGINEERING</small></span></a>
                 <nav><a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">◫ &nbsp; Overview</a><a routerLink="/playground/model-routing"
                                                                                                                                   routerLinkActive="active">◇ &nbsp;
-                    Playground</a><a routerLink="/test-scenarios" routerLinkActive="active">▤ &nbsp; Test Scenarios</a><a routerLink="/results" routerLinkActive="active">◷ &nbsp;
+                    Playground</a><a routerLink="/test-scenarios" routerLinkActive="active">▤ &nbsp; Test Scenarios</a><a routerLink="/pricing" routerLinkActive="active">＄ &nbsp; Pricing Settings</a><a routerLink="/results" routerLinkActive="active">◷ &nbsp;
                     History</a></nav>
                 <div class="side-footer">Structured decisions vs.<br>generative intelligence<br><small>&copy;José Alberto Ruiz</small></div>
             </aside>
