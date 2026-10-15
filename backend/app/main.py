@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from .catalog import CASES, BY_ID, public_case
 from .providers import claude, jev
 from .pricing import estimate
+from .scenarios import reference, assess, public_scenarios
 
 logger = logging.getLogger("jev_decision_lab")
 app = FastAPI(title="Jev Decision Lab API", version="0.1.0")
@@ -21,6 +22,7 @@ class ExecuteRequest(BaseModel):
     useCaseId: str
     input: str = Field(min_length=1, max_length=20000)
     providers: list[Literal["jev", "haiku", "sonnet"]] = Field(min_length=1, max_length=3)
+    scenarioId: str | None = None
 
 RUNS: dict[str, dict] = {}
 
@@ -49,6 +51,7 @@ async def execute(body: ExecuteRequest):
         raise HTTPException(404, "Unknown use case")
     if len(set(body.providers)) != len(body.providers):
         raise HTTPException(422, "Duplicate providers")
+    selected_reference = reference(case.id, body.scenarioId, body.input) if body.scenarioId else None
     async def run(provider: str) -> dict[str, Any]:
         started = time.perf_counter()
         try:
@@ -60,6 +63,7 @@ async def execute(body: ExecuteRequest):
                 data = await claude.evaluate(case, body.input, provider)
             return {"provider": provider, "status": "success", **data,
                     **estimate(provider, data.get("model"), data.get("usage")),
+                    "correct": assess(case.id, data.get("value"), selected_reference),
                     "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
         except Exception as exc:
             # Only log a sanitized summary: never log request bodies, headers,
@@ -93,8 +97,28 @@ async def execute(body: ExecuteRequest):
                     "detail": detail, "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
     result = {
         "id": str(uuid4()), "useCaseId": case.id, "input": body.input,
+        "scenarioId": body.scenarioId if selected_reference is not None or (body.scenarioId and any(s["id"] == body.scenarioId and s["input"] == body.input for s in public_scenarios(case.id))) else None,
+        "expected": selected_reference,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": await asyncio.gather(*(run(p) for p in body.providers)),
     }
     RUNS[result["id"]] = result
     return result
+
+@app.get("/api/quality/{case_id}")
+def quality(case_id: str):
+    if case_id not in BY_ID:
+        raise HTTPException(404, "Unknown use case")
+    latest: dict[tuple[str, str], dict] = {}
+    for run in RUNS.values():
+        if run["useCaseId"] != case_id or not run.get("scenarioId"):
+            continue
+        for result in run["results"]:
+            latest[(run["scenarioId"], result["provider"])] = result
+    summary = []
+    for provider in ("jev", "haiku", "sonnet"):
+        evaluated = [item for (sid, name), item in latest.items() if name == provider and item.get("correct") is not None and item["status"] == "success"]
+        correct = sum(item["correct"] is True for item in evaluated)
+        summary.append({"provider": provider, "correct": correct, "total": len(evaluated),
+                        "accuracyPercent": round(correct / len(evaluated) * 100, 1) if evaluated else None})
+    return {"useCaseId": case_id, "results": summary, "referenceType": "illustrative"}

@@ -79,10 +79,13 @@ CASES = [
 ]
 BY_ID = {case.id: case for case in CASES}
 
+from .scenarios import public_scenarios
+
 def public_case(case: UseCase) -> dict:
     return {
         "id": case.id, "name": case.name, "kind": case.kind,
         "description": case.description, "example": case.example,
         "prompt": case.prompt, "criteria": case.criteria,
+        "scenarios": public_scenarios(case.id),
         "providers": ["haiku", "sonnet"] if case.kind == "generation" else ["jev", "haiku", "sonnet"],
     }

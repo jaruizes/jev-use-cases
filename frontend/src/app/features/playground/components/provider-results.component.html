@@ -62,3 +62,43 @@
     <small>Relative estimated cost per request. Missing/unpriced providers are excluded.</small>
   </div>
 }
+
+@if (advantage('cost', 'haiku') || advantage('cost', 'sonnet')) {
+  <section class="advantage-summary">
+    <h3>Observed Jev advantage in this execution</h3>
+    <div class="advantage-grid">
+      <div><small>Cost vs Haiku</small><strong>{{ advantage('cost','haiku') || 'N/A' }}</strong><span>times cheaper</span></div>
+      <div><small>Cost vs Sonnet</small><strong>{{ advantage('cost','sonnet') || 'N/A' }}</strong><span>times cheaper</span></div>
+      <div><small>Latency vs Haiku</small><strong>{{ advantage('latency','haiku') || 'N/A' }}</strong><span>speed ratio</span></div>
+      <div><small>Latency vs Sonnet</small><strong>{{ advantage('latency','sonnet') || 'N/A' }}</strong><span>speed ratio</span></div>
+    </div>
+    <p class="note">One execution only · costs are estimates. A ratio below 1× means Jev was not cheaper/faster.</p>
+  </section>
+}
+@if (execution.scenarioId) {
+  <section class="quality-summary">
+    <h3>Reference quality · {{ execution.scenarioId }}</h3>
+    <p class="note">Illustrative expected result: {{ execution.expected ?? 'Qualitative review only' }}. Numeric scoring accepts ±0.5; Noul uses 0.5 threshold.</p>
+    <div class="quality-grid">
+      @for (r of execution.results; track r.provider) {
+        <div class="quality-cell">
+          <strong>{{ r.provider.toUpperCase() }}</strong>
+          <span>{{ r.correct === true ? '✓ Match' : r.correct === false ? '✕ Mismatch' : 'Not evaluated' }}</span>
+        </div>
+      }
+    </div>
+    @if (quality; as q) {
+      <h3>Accuracy across selected reference scenarios</h3>
+      <div class="quality-grid">
+        @for (item of q.results; track item.provider) {
+          <div class="quality-cell">
+            <strong>{{ item.provider.toUpperCase() }}</strong>
+            <span>{{ item.accuracyPercent == null ? 'N/A' : (item.accuracyPercent + '%') }}</span>
+            <small>{{ item.correct }} / {{ item.total }} evaluated</small>
+          </div>
+        }
+      </div>
+      <p class="note">Latest attempt per scenario and provider, in current backend session. This is a demo reference agreement rate, not validated model accuracy.</p>
+    }
+  </section>
+}
