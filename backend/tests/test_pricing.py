@@ -39,3 +39,11 @@ def test_jev_invalid_override(monkeypatch):
 
 def test_reject_negative_usage():
     assert estimate("haiku", "claude-haiku-4-5", {"input_tokens": -1, "output_tokens": 10})["pricingStatus"] == "missing_usage"
+
+def test_jev_default_returns_complete_cost_metadata(monkeypatch):
+    """Regression: price source must be a declared variable, not part of a comment."""
+    monkeypatch.delenv("JEV_INPUT_USD_PER_MTOK", raising=False)
+    result = estimate("jev", "jev-latest", {"input_tokens": 413, "output_tokens": 53})
+    assert result["pricingStatus"] == "estimated"
+    assert result["estimatedCostUsd"] == pytest.approx(413 * 0.042 / 1_000_000)
+    assert result["pricingSource"] == "https://typesafe.ai/blog/introducing-system-one-models-and-jev"

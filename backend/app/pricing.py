@@ -4,7 +4,8 @@ import os
 
 VERSION = "2026-10-15"
 # Rates correspond to the standard Anthropic API, without batch / cache discounts.
-# Jev published list price: $0.042 / MTok input, output free (TypeSafe, 2026-09-15).\nJEV_PRICE_SOURCE = "https://typesafe.ai/blog/introducing-system-one-models-and-jev"
+# Jev published list price: $0.042 / MTok input, output free (TypeSafe, 2026-09-15).
+JEV_PRICE_SOURCE = "https://typesafe.ai/blog/introducing-system-one-models-and-jev"
 RATES = {
     "claude-haiku-4-5": ("1", "5", "https://www.anthropic.com/news/claude-haiku-4-5"),
     "claude-haiku-4-5-20251001": ("1", "5", "https://www.anthropic.com/news/claude-haiku-4-5"),
