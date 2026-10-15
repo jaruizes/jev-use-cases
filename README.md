@@ -70,6 +70,20 @@ For a **fair comparison**, the Claude adapter also uses **one API call** for Inc
 
 
 
+### Explainability and decision justification
+
+**Jev does not provide a natural-language explanation of why it selected one alternative or assigned a particular score.** Its System One interface is designed for bounded, structured decisions rather than generating a rationale. Depending on the question type and the SDK response, it may expose decision-related signals (such as option probabilities or score information), but these are **not** a causal explanation of the model's internal reasoning.
+
+If a business process requires an understandable justification, one possible architecture is to use **a separate generative model (for example, Claude Haiku)** after Jev has returned its decision:
+
+1. **Jev decides:** evaluate the input with `Choice`, `Score`, `Noul`, or multiple questions, returning structured outputs.
+2. **The LLM explains:** provide the original input, Jev's decision and any relevant decision signals to an LLM; ask it to cite concrete evidence in the input, disclose ambiguities and explain how the result can be interpreted.
+3. **The application validates and presents:** check that cited evidence is present, clearly identify the justification as AI-generated, and apply human review where the decision has significant consequences.
+
+**Important limitation:** this is a *post-hoc explanation*, **not Jev's own reasoning or proof that Jev relied on the cited evidence**. An LLM could generate a plausible but inaccurate justification; explanations therefore require validation and must not be presented as guaranteed faithful or as a substitute for audit records and policy enforcement.
+
+This hybrid approach also introduces **additional latency, cost, and dependencies**. A practical trade-off is to request explanations only when needed (for example, ambiguous decisions, manual review, or high-impact outcomes) instead of explaining every decision. The current PoC **does not implement this extra explanation step**; it compares the providers' decisions, quality, latency, and estimated costs only.
+
 ### Where each approach fits
 
 - **Jev:** classification, prioritization, proposition evaluation and combinations of these decisions.
