@@ -44,6 +44,32 @@ CASES = [
         None,
     ),
     UseCase(
+        "email-classification", "Email Classification", "choice",
+        "Classify incoming business emails by intent.",
+        "Subject: Invoice discrepancy. Hello, the amount charged on invoice INV-204 differs from the agreed price. Please send a corrected invoice.",
+        "Choose the primary business intent of this email using exactly one category.",
+        {
+            "SALES": "New business inquiries, sales and commercial proposals.",
+            "SUPPORT": "Product or service problems and troubleshooting.",
+            "BILLING": "Invoices, payments, refunds and billing discrepancies.",
+            "SPAM": "Unsolicited or irrelevant promotional messages.",
+            "OTHER": "Messages with another purpose or insufficient information.",
+        },
+    ),
+    UseCase(
+        "incident-prioritization", "Incident Prioritization", "score",
+        "Prioritize operational incidents according to business impact and urgency.",
+        "Our checkout is unavailable for all customers during peak sales hours. Payments cannot be completed, no workaround exists and support is receiving hundreds of reports.",
+        "Rate incident priority from 0 to 4 using affected users, business impact, urgency and availability of workarounds.",
+        [
+            "Informational or cosmetic issue with no material business impact",
+            "Low impact, limited scope and a workaround",
+            "Moderate impact or partial degradation",
+            "High impact affecting key workflows or many users",
+            "Critical outage or severe data/security risk needing immediate response",
+        ],
+    ),
+    UseCase(
         "architecture-design", "Architecture Decision & Planning", "generation",
         "Develop an architecture and explain alternatives and trade-offs.",
         "A Java/PostgreSQL insurance monolith handles policies, payments and claims. Design a phased migration to services with strong consistency where needed, failure handling and minimal downtime.",
@@ -58,5 +84,5 @@ def public_case(case: UseCase) -> dict:
         "id": case.id, "name": case.name, "kind": case.kind,
         "description": case.description, "example": case.example,
         "prompt": case.prompt, "criteria": case.criteria,
-        "providers": ["haiku", "sonnet"] if case.kind == "generation" else ["jev", "haiku", "sonnet", "rules"],
+        "providers": ["haiku", "sonnet"] if case.kind == "generation" else ["jev", "haiku", "sonnet"],
     }
