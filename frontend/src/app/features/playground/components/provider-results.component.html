@@ -11,6 +11,9 @@
       </div>
       <div class="result-value">
         @if (r.status === 'success') {
+            <div class="stats">
+                <div><small>RESULT</small></div>
+            </div>
           @if (isMultiResult(r.value)) {
             <div class="triage-output">
               <div><span>PRIORITY</span><strong>{{ $any(r.value).priority }}</strong></div>
