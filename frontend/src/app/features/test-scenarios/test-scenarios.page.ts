@@ -13,6 +13,7 @@ interface Row {
   successes: number;
   errors: number;
   correct: number;
+  incorrect: number;
   evaluated: number;
   accuracy: number | null;
   avgLatency: number | null;
@@ -23,8 +24,9 @@ interface Row {
 }
 interface Detail {
   scenario: Scenario;
-  values: {provider: ProviderId; correct: number; evaluated: number; failed: number;
-    responses: string[]; avgLatency: number | null; avgCost: number | null;}[];
+  values: {provider: ProviderId; correct: number; incorrect: number; evaluated: number; failed: number;
+    responses: string[]; mismatches: {expected: string; actual: string}[];
+    avgLatency: number | null; avgCost: number | null;}[];
 }
 
 @Component({
@@ -192,6 +194,7 @@ export class TestScenariosPage {
         provider, attempts: all.length, successes: successes.length,
         errors: all.length - successes.length,
         correct: evaluated.filter(r => r.correct === true).length,
+        incorrect: evaluated.filter(r => r.correct === false).length,
         evaluated: evaluated.length,
         accuracy: evaluated.length ?
           100 * evaluated.filter(r => r.correct === true).length / evaluated.length : null,
@@ -217,9 +220,13 @@ export class TestScenariosPage {
         return {
           provider,
           correct: evaluated.filter(r => r.correct === true).length,
+          incorrect: evaluated.filter(r => r.correct === false).length,
           evaluated: evaluated.length,
           failed: results.length - successes.length,
-          responses: successes.map(r => typeof r.value === 'object' && r.value != null ? JSON.stringify(r.value) : String(r.value ?? '—')),
+          responses: successes.map(r => this.displayValue(r.value)),
+          mismatches: this.runs().filter(run => run.scenarioId === scenario.id)
+            .flatMap(run => run.results.filter(r => r.provider === provider && r.status === 'success' && r.correct === false)
+              .map(r => ({expected: this.displayValue(run.expected ?? scenario.expected), actual: this.displayValue(r.value)}))),
           avgLatency: successes.length ?
             successes.reduce((sum,r)=>sum+r.latencyMs,0)/successes.length : null,
           avgCost: priced.length === successes.length && successes.length > 0 ?
@@ -238,6 +245,10 @@ export class TestScenariosPage {
     const value = metric === 'cost' ? competitor.avgCost : competitor.avgLatency;
     return base != null && value != null && base > 0 ?
       (value/base).toFixed(1) + '×' : 'N/A';
+  }
+
+  displayValue(value: unknown): string {
+    return value != null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—');
   }
 
   money(value: number | null): string {

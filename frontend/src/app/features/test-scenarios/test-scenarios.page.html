@@ -79,12 +79,15 @@
           <div class="summary-metrics"><span>Avg. latency</span><strong>{{ row.avgLatency == null ? 'N/A' : (row.avgLatency | number:'1.0-1') + ' ms' }}</strong></div>
           <div class="summary-metrics"><span>Total estimated cost</span><strong>{{ money(row.totalCost) }}</strong></div>
           <div class="summary-metrics"><span>Avg. cost / call</span><strong>{{ money(row.avgCost) }}</strong></div>
-          <div class="summary-metrics"><span>Successful / failed</span><strong>{{ row.successes }} / {{ row.errors }}</strong></div>
+          <div class="summary-metrics"><span>Correct decisions</span><strong>{{ row.correct }}</strong></div>
+          <div class="summary-metrics"><span>Incorrect decisions</span><strong [class.decision-error]="row.incorrect > 0">{{ row.incorrect }}</strong></div>
+          <div class="summary-metrics"><span>Successful API calls</span><strong>{{ row.successes }}</strong></div>
+          <div class="summary-metrics"><span>Failed API calls</span><strong>{{ row.errors }}</strong></div>
         </div>
       }
     </div>
     @if (selected?.kind !== 'generation') {
-      <p class="note">Agreement against illustrative reference labels, not an expert-validated accuracy benchmark. Failed calls are excluded from agreement but counted separately.</p>
+      <p class="note">Agreement against illustrative reference labels, not an expert-validated accuracy benchmark. Failed API calls are excluded from reference agreement and counted separately from incorrect decisions.</p>
     } @else {
       <p class="note">Architecture generation requires expert qualitative review. Accuracy is N/A by design.</p>
     }
@@ -114,7 +117,10 @@
             @for (value of detail.values; track value.provider) {
               <div class="detail-provider">
                 <strong>{{ value.provider.toUpperCase() }}</strong>
-                <p>Matches: {{ value.correct }} / {{ value.evaluated }} · Errors: {{ value.failed }}</p>
+                <p>Correct: {{ value.correct }} / {{ value.evaluated }} · <span [class.decision-error]="value.incorrect > 0">Incorrect decisions: {{ value.incorrect }}</span> · Failed API calls: {{ value.failed }}</p>
+                @for (mismatch of value.mismatches; track $index) {
+                  <div class="decision-mismatch"><strong>Incorrect decision</strong><div>Expected: <b>{{ mismatch.expected }}</b></div><div>Actual: <b>{{ mismatch.actual }}</b></div><small>API status: Success · Reference match: No</small></div>
+                }
                 <p>Outputs: {{ value.responses.join(', ') || '—' }}</p>
                 <p>Average latency: {{ value.avgLatency == null ? 'N/A' : (value.avgLatency | number:'1.0-1') + ' ms' }}</p>
                 <p>Average cost: {{ money(value.avgCost) }}</p>
