@@ -24,6 +24,19 @@
         <div><small>LATENCY</small><b>{{ r.latencyMs | number:'1.0-2' }} ms</b></div>
         <div><small>MODEL</small><b>{{ r.model || '—' }}</b></div>
       </div>
+      @if (r.status === 'success') {
+        <div class="cost-block">
+          <div class="cost-line">
+            <span>ESTIMATED COST / REQUEST</span>
+            <strong>{{ formatMoney(r.estimatedCostUsd) }}</strong>
+          </div>
+          <div class="cost-line">
+            <span>PROJECTED / 1,000 DECISIONS</span>
+            <strong>{{ formatMoney(r.costPer1000Usd) }}</strong>
+          </div>
+          <small>{{ r.pricingStatus === 'estimated' ? 'Estimate · ' + r.pricingVersion : costMessage(r.pricingStatus) }}</small>
+        </div>
+      }
       @if (r.usage) {
         <p class="muted small">Tokens: {{ r.usage.input_tokens ?? '—' }} input / {{ r.usage.output_tokens ?? '—' }} output</p>
       }
@@ -34,4 +47,18 @@
     </article>
   }
 </div>
-<p class="note">Costs are not shown until verified billing data/pricing is integrated. A single execution is not a statistically valid benchmark.</p>
+<p class="note">Costs are estimates based on recorded tokens and a versioned rate table, not actual provider invoices. Projections assume equivalent usage per decision and exclude caching, batch discounts, taxes and other fees. A single run is not a statistically valid benchmark.</p>
+@if (comparison(); as comp) {
+  <div class="cost-comparison">
+    <span class="eyebrow">COST COMPARISON · SUCCESSFUL CALLS ONLY</span>
+    <h3>Jev vs Claude</h3>
+    @for (item of comp; track item.provider) {
+      <div class="comparison-line">
+        <strong>{{ item.provider.toUpperCase() }}</strong>
+        <div class="comparison-track"><div class="comparison-fill" [style.width.%]="item.percent"></div></div>
+        <span>{{ formatMoney(item.cost) }}</span>
+      </div>
+    }
+    <small>Relative estimated cost per request. Missing/unpriced providers are excluded.</small>
+  </div>
+}

@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from .catalog import CASES, BY_ID, public_case
 from .providers import claude, jev
+from .pricing import estimate
 
 logger = logging.getLogger("jev_decision_lab")
 app = FastAPI(title="Jev Decision Lab API", version="0.1.0")
@@ -57,7 +58,9 @@ async def execute(body: ExecuteRequest):
                 data = await jev.evaluate(case, body.input)
             else:
                 data = await claude.evaluate(case, body.input, provider)
-            return {"provider": provider, "status": "success", **data, "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
+            return {"provider": provider, "status": "success", **data,
+                    **estimate(provider, data.get("model"), data.get("usage")),
+                    "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
         except Exception as exc:
             # Only log a sanitized summary: never log request bodies, headers,
             # credentials, provider response text or the full exception traceback.
