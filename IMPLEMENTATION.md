@@ -52,3 +52,7 @@ Not in M1: batch/caching tariffs, invoice reconciliation, benchmarking distribut
 - Running all scenarios makes real provider calls (may incur charges); runs are sequential and reference summaries are session-only. This is not an expert-reviewed benchmark dataset.
 
 Use `pytest -q` from `backend` to execute the new scenario and quality tests; Angular and live APIs still need verification in a local Docker build.
+
+## Dedicated Test Scenarios UI
+
+The old placeholder Benchmarks navigation was replaced by `/test-scenarios`. Playground now handles one isolated run only. Test Scenarios offers 5 fixed scenarios, 1–20 iterations, Jev/Haiku/Sonnet selection, predicted request count, sequential rounds, stopping after an in-flight round, and an isolated per-batch result report: matched/evaluated and provider failures, average latency, total estimated and per-call cost, Jev/Claude ratios, and detailed outcomes for all five scenarios. A batch of 5 scenarios × 3 iterations runs 15 rounds and 45 provider calls when all three are selected. It can incur real API charges. Results are not durable after page navigation or refresh. The `/benchmarks` URL redirects to the new view.

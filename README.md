@@ -96,7 +96,7 @@ The application will have two modes:
 
 For UC4, display the generated proposal as readable Markdown, not merely raw JSON.
 
-### Benchmark
+### Test Scenarios
 
 - Select versioned datasets, providers and repetitions.
 - Preview projected call counts and configure cost/request limits.
@@ -236,3 +236,10 @@ Assign a priority from 0 (informational) to 4 (critical) based on business impac
 The Playground reports versioned **estimated** USD costs using provider-reported token usage. Claude Haiku 4.5 uses $1 input / $5 output per million tokens; Sonnet 4.5 uses $3 / $15. Jev defaults to the published TypeSafe list rate of $0.042 per million input tokens (output free), with optional override via `JEV_INPUT_USD_PER_MTOK`. See [TypeSafe's announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). No cost of $0 is invented. These figures do not include billing adjustments, cache/batch discounts, taxes, or volume changes.
 
 Sources: [Haiku 4.5 pricing](https://www.anthropic.com/news/claude-haiku-4-5) · [Sonnet 4.5 pricing](https://www.anthropic.com/news/claude-sonnet-4-5).
+
+## Two separate ways to run experiments
+
+- **Playground**: one ad hoc input and one comparison across selected providers. Includes direct cost and latency advantages.
+- **Test Scenarios** (`/test-scenarios`): five fixed examples for a selected use case, with 1–20 repetitions. The interface previews total calls (e.g. 5 scenarios × 3 repetitions × 3 providers = 45 API calls), shows live progress, aggregates success/error counts, reference agreement, average latency, estimated total cost and mean cost, plus detailed results by scenario. Stop ends after the current call. The report is specific to the batch, not earlier History executions.
+
+The reference labels are *illustrative*, not expert-validated. Accuracy means agreement with them; failures are reported independently. The architecture-generation case has no numeric reference accuracy. Results are held in browser memory for the current page session; the backend still stores individual execution history in process memory.
