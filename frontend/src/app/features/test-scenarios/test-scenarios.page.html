@@ -23,7 +23,7 @@
         @if (datasetStatus()) { <p class="dataset-valid">✓ {{ datasetName }} · {{ datasetStatus() }}</p> }
       </div>
     }
-    <label class="field-label" for="iterations">03 / ITERATIONS PER SCENARIO</label>02 / ITERATIONS PER SCENARIO</label>
+    <label class="field-label" for="iterations">03 / ITERATIONS PER SCENARIO</label>
     <input id="iterations" type="number" min="1" max="20" step="1" [(ngModel)]="iterations"
            [disabled]="running() || completed()" />
     <p class="note">1–20 iterations. Each iteration runs every scenario in the selected dataset.</p>
