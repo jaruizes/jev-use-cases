@@ -21,9 +21,11 @@ A visual, reproducible proof of concept (PoC) to compare **Jev**, **Claude Haiku
 | UC1 | Intelligent Model Routing | AI/software engineering | Jev **Choice** | Which Claude model should handle this task? |
 | UC2 | Intelligent Lead Scoring | B2B sales | Jev **Score** | How promising is this commercial opportunity? |
 | UC3 | Semantic Guardrails | Agent governance | Jev **Noul** | Does this request semantically violate a policy? |
+| UC5 | Email Classification | Business operations | Jev **Choice** | Where should an email be routed? |
+| UC6 | Incident Prioritization | Operations | Jev **Score** | How urgent is the incident? |
 | UC4 | Architecture Decision & Planning | Software architecture | **Generative LLM** | How do we design and explain a complex solution? |
 
-The first three are **candidate Jev use cases**, not predetermined victories.
+Five are **candidate Jev use cases**, not predetermined victories.
 
 ### UC1 — Intelligent Model Routing (Choice)
 
@@ -85,9 +87,9 @@ The application will have two modes:
 
 ### Playground
 
-1. Choose one of the four use cases.
+1. Choose one of the six use cases.
 2. Load a representative example or edit input data and semantic criteria.
-3. Select providers: Jev, Claude Haiku, Claude Sonnet and, where appropriate, deterministic rules.
+3. Select providers: Jev, Claude Haiku and Claude Sonnet.
 4. Execute real calls using backend-protected API credentials.
 5. View results side by side: decision, raw output, duration, estimated cost, confidence/score when available, API errors and expected answer.
 6. Repeat the experiment or try ambiguous/edge-case examples.
@@ -216,3 +218,15 @@ This README will be updated with verified startup commands and actual model/SDK 
 > **Use deterministic code for exact rules, Jev for bounded context-dependent decisions, and generative LLMs for open-ended reasoning or new artifact generation.**
 
 The goal is to **measure the boundary**, not assume it.
+
+## Additional decision use cases
+
+### UC5 — Email Classification (Choice)
+
+Classify an email into SALES, SUPPORT, BILLING, SPAM or OTHER from its subject and body. Compare Jev with Claude Haiku/Sonnet for ambiguous requests, such as messages that contain both a support issue and a refund request.
+
+### UC6 — Incident Prioritization (Score)
+
+Assign a priority from 0 (informational) to 4 (critical) based on business impact, affected customers, urgency, and workarounds. Compare Jev with Claude Haiku/Sonnet; scoring is an assessment and must not bypass formal incident-management escalation policies.
+
+**Playground provider selection:** only Jev, Claude Haiku and Claude Sonnet. UC4 explicitly highlights that Jev is not an LLM and cannot generate an open-ended architecture.
