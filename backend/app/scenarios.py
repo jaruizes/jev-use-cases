@@ -226,6 +226,50 @@ SCENARIOS = {
  ],
 }
 
+
+def validate_dataset(case_id, scenarios):
+    """Validate the public JSON scenario contract without running providers."""
+    from .catalog import BY_ID
+    if case_id not in BY_ID:
+        raise ValueError("Unknown use case")
+    if not isinstance(scenarios, list) or not 1 <= len(scenarios) <= 200:
+        raise ValueError("Dataset must contain between 1 and 200 scenarios")
+    case = BY_ID[case_id]
+    allowed = set(case.criteria) if case.kind == "choice" else set()
+    seen = set()
+    validated = []
+    for index, entry in enumerate(scenarios, 1):
+        if not isinstance(entry, dict) or set(entry) != {"id", "title", "input", "expected"}:
+            raise ValueError(f"Scenario {index}: required fields are id, title, input, expected")
+        sid, title, prompt, expected = (entry[k] for k in ("id", "title", "input", "expected"))
+        if not isinstance(sid, str) or not 1 <= len(sid) <= 64 or not sid.isascii() or not all(c.isalnum() or c in "-_" for c in sid):
+            raise ValueError(f"Scenario {index}: id must be 1–64 ASCII letters, digits, - or _")
+        if sid in seen:
+            raise ValueError(f"Scenario {index}: duplicate id {sid}")
+        seen.add(sid)
+        if not isinstance(title, str) or not 1 <= len(title.strip()) <= 160:
+            raise ValueError(f"Scenario {index}: title must contain 1–160 characters")
+        if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= 20000:
+            raise ValueError(f"Scenario {index}: input must contain 1–20000 characters")
+        valid = False
+        if case.kind == "choice":
+            valid = isinstance(expected, str) and expected in allowed
+        elif case.kind == "score":
+            valid = type(expected) is int and 0 <= expected <= 4
+        elif case.kind == "noul":
+            valid = type(expected) is int and expected in (0, 1)
+        elif case.kind == "generation":
+            valid = expected is None
+        elif case.kind == "multi":
+            valid = (isinstance(expected, dict) and set(expected) == {"priority", "security_risk", "team"}
+                     and type(expected["priority"]) is int and 0 <= expected["priority"] <= 4
+                     and type(expected["security_risk"]) is int and expected["security_risk"] in (0, 1)
+                     and isinstance(expected["team"], str) and expected["team"] in case.criteria["team"])
+        if not valid:
+            raise ValueError(f"Scenario {index}: expected does not match the {case.kind} decision contract")
+        validated.append({"id": sid, "title": title.strip(), "input": prompt.strip(), "expected": expected})
+    return validated
+
 def public_scenarios(case_id):
     return [{"id": sid, "title": title, "input": prompt, "expected": expected}
             for sid, title, prompt, expected in SCENARIOS.get(case_id, [])]
