@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe, JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { UseCase, ProviderId, Execution, ProviderResult, Scenario } from '../../core/models';
 import { UseCasesApiService } from '../../services/use-cases-api.service';
 import { ExecutionsApiService } from '../../services/executions-api.service';
@@ -12,6 +13,7 @@ interface Row {
   successes: number;
   errors: number;
   correct: number;
+  incorrect: number;
   evaluated: number;
   accuracy: number | null;
   avgLatency: number | null;
@@ -22,8 +24,9 @@ interface Row {
 }
 interface Detail {
   scenario: Scenario;
-  values: {provider: ProviderId; correct: number; evaluated: number; failed: number;
-    responses: string[]; avgLatency: number | null; avgCost: number | null;}[];
+  values: {provider: ProviderId; correct: number; incorrect: number; evaluated: number; failed: number;
+    responses: string[]; mismatches: {expected: string; actual: string}[];
+    avgLatency: number | null; avgCost: number | null;}[];
 }
 
 @Component({
@@ -34,6 +37,7 @@ interface Detail {
 export class TestScenariosPage {
   private catalog = inject(UseCasesApiService);
   private executions = inject(ExecutionsApiService);
+  private http = inject(HttpClient);
 
   cases = signal<UseCase[]>([]);
   selectedId = 'incident-prioritization';
@@ -45,6 +49,56 @@ export class TestScenariosPage {
   error = signal('');
   runs = signal<Execution[]>([]);
   cancelled = false;
+  datasetMode: 'built-in' | 'custom' = 'built-in';
+  customScenarios = signal<Scenario[]>([]);
+  datasetName = '';
+  datasetStatus = signal('');
+  validating = signal(false);
+
+  get activeScenarios(): Scenario[] {
+    return this.datasetMode === 'custom' ? this.customScenarios() : (this.selected?.scenarios ?? []);
+  }
+  get canRun(): boolean {
+    return this.datasetMode === 'built-in' || (this.customScenarios().length > 0 && !this.validating());
+  }
+
+  changeMode(mode: 'built-in' | 'custom'): void {
+    if (this.running()) return;
+    this.datasetMode = mode;
+    this.clearResults();
+  }
+
+  async uploadFile(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    this.customScenarios.set([]);
+    this.datasetName = '';
+    this.datasetStatus.set('');
+    this.clearResults();
+    if (!file) return;
+    if (file.size > 1024 * 1024 || !file.name.toLowerCase().endsWith('.json')) {
+      this.error.set('Choose a JSON file no larger than 1 MB.'); return;
+    }
+    this.validating.set(true);
+    this.error.set('');
+    try {
+      const raw: unknown = JSON.parse(await file.text());
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw Error('Dataset must be a JSON object.');
+      const object = raw as Record<string, unknown>;
+      if (object['useCaseId'] !== this.selectedId || !Array.isArray(object['scenarios']))
+        throw Error('Dataset useCaseId must match the selected use case, and scenarios must be an array.');
+      const response = await firstValueFrom(this.http.post<{valid:boolean;count:number;scenarios:Scenario[]}>(
+        '/api/datasets/validate', {useCaseId:this.selectedId,scenarios:object['scenarios']}));
+      this.customScenarios.set(response.scenarios);
+      this.datasetName = file.name;
+      this.datasetStatus.set(response.count + ' scenarios validated and ready.');
+    } catch (err: unknown) {
+      const apiMessage = (err as {error?:{detail?:string}})?.error?.detail;
+      this.error.set(typeof apiMessage === 'string' ? apiMessage :
+        err instanceof Error ? err.message : 'Dataset validation failed.');
+    } finally { this.validating.set(false); }
+  }
 
   constructor() {
     this.catalog.list().subscribe({
@@ -58,13 +112,16 @@ export class TestScenariosPage {
   }
 
   get total(): number {
-    return (this.selected?.scenarios.length ?? 0) * this.iterations;
+    return this.activeScenarios.length * Number(this.iterations);
   }
 
   changeCase(id: string): void {
     this.selectedId = id;
     if (this.selected?.kind === 'generation') this.providers.set(['haiku','sonnet']);
     else this.providers.set(['jev','haiku','sonnet']);
+    this.customScenarios.set([]);
+    this.datasetStatus.set('');
+    this.datasetName = '';
     this.clearResults();
   }
 
@@ -84,7 +141,7 @@ export class TestScenariosPage {
   async start(): Promise<void> {
     const c = this.selected;
     const n = Number(this.iterations);
-    if (!c || this.running() || this.providers().length === 0 ||
+    if (!c || this.running() || !this.canRun || this.providers().length === 0 ||
         !Number.isInteger(n) || n < 1 || n > 20) {
       this.error.set('Select providers and between 1 and 20 iterations.');
       return;
@@ -98,10 +155,10 @@ export class TestScenariosPage {
     const ids = [...this.providers()];
     try {
       for (let iteration = 0; iteration < n; iteration++) {
-        for (const scenario of c.scenarios) {
+        for (const scenario of this.activeScenarios) {
           if (this.cancelled) break;
           const execution = await firstValueFrom(
-            this.executions.execute(c.id, scenario.input, ids, scenario.id));
+            this.executions.execute(c.id, scenario.input, ids, scenario.id, this.datasetMode === 'custom' ? scenario : undefined));
           this.runs.update(previous => [...previous, execution]);
           this.progress.update(value => value + 1);
         }
@@ -137,6 +194,7 @@ export class TestScenariosPage {
         provider, attempts: all.length, successes: successes.length,
         errors: all.length - successes.length,
         correct: evaluated.filter(r => r.correct === true).length,
+        incorrect: evaluated.filter(r => r.correct === false).length,
         evaluated: evaluated.length,
         accuracy: evaluated.length ?
           100 * evaluated.filter(r => r.correct === true).length / evaluated.length : null,
@@ -150,7 +208,7 @@ export class TestScenariosPage {
   }
 
   details(): Detail[] {
-    return (this.selected?.scenarios ?? []).map(scenario => ({
+    return this.activeScenarios.map(scenario => ({
       scenario,
       values: this.providers().map(provider => {
         const results = this.runs()
@@ -162,9 +220,13 @@ export class TestScenariosPage {
         return {
           provider,
           correct: evaluated.filter(r => r.correct === true).length,
+          incorrect: evaluated.filter(r => r.correct === false).length,
           evaluated: evaluated.length,
           failed: results.length - successes.length,
-          responses: successes.map(r => typeof r.value === 'object' && r.value != null ? JSON.stringify(r.value) : String(r.value ?? '—')),
+          responses: successes.map(r => this.displayValue(r.value)),
+          mismatches: this.runs().filter(run => run.scenarioId === scenario.id)
+            .flatMap(run => run.results.filter(r => r.provider === provider && r.status === 'success' && r.correct === false)
+              .map(r => ({expected: this.displayValue(run.expected ?? scenario.expected), actual: this.displayValue(r.value)}))),
           avgLatency: successes.length ?
             successes.reduce((sum,r)=>sum+r.latencyMs,0)/successes.length : null,
           avgCost: priced.length === successes.length && successes.length > 0 ?
@@ -183,6 +245,10 @@ export class TestScenariosPage {
     const value = metric === 'cost' ? competitor.avgCost : competitor.avgLatency;
     return base != null && value != null && base > 0 ?
       (value/base).toFixed(1) + '×' : 'N/A';
+  }
+
+  displayValue(value: unknown): string {
+    return value != null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—');
   }
 
   money(value: number | null): string {

@@ -1,0 +1,23 @@
+{
+  "useCaseId": "email-classification",
+  "scenarios": [
+    {
+      "id": "spam-es-01",
+      "title": "Unsolicited prize",
+      "input": "Asunto: ¡Has ganado un móvil! Reclama tu premio enviando tus datos personales hoy.",
+      "expected": "SPAM"
+    },
+    {
+      "id": "billing-es-01",
+      "title": "Invoice discrepancy",
+      "input": "Asunto: Error en factura. El importe de INV-220 es incorrecto; solicitamos una rectificación.",
+      "expected": "BILLING"
+    },
+    {
+      "id": "support-es-01",
+      "title": "Login issue",
+      "input": "Asunto: No puedo acceder. Desde la última actualización aparece un error al iniciar sesión.",
+      "expected": "SUPPORT"
+    }
+  ]
+}

@@ -70,6 +70,20 @@ For a **fair comparison**, the Claude adapter also uses **one API call** for Inc
 
 
 
+### Explainability and decision justification
+
+**Jev does not provide a natural-language explanation of why it selected one alternative or assigned a particular score.** Its System One interface is designed for bounded, structured decisions rather than generating a rationale. Depending on the question type and the SDK response, it may expose decision-related signals (such as option probabilities or score information), but these are **not** a causal explanation of the model's internal reasoning.
+
+If a business process requires an understandable justification, one possible architecture is to use **a separate generative model (for example, Claude Haiku)** after Jev has returned its decision:
+
+1. **Jev decides:** evaluate the input with `Choice`, `Score`, `Noul`, or multiple questions, returning structured outputs.
+2. **The LLM explains:** provide the original input, Jev's decision and any relevant decision signals to an LLM; ask it to cite concrete evidence in the input, disclose ambiguities and explain how the result can be interpreted.
+3. **The application validates and presents:** check that cited evidence is present, clearly identify the justification as AI-generated, and apply human review where the decision has significant consequences.
+
+**Important limitation:** this is a *post-hoc explanation*, **not Jev's own reasoning or proof that Jev relied on the cited evidence**. An LLM could generate a plausible but inaccurate justification; explanations therefore require validation and must not be presented as guaranteed faithful or as a substitute for audit records and policy enforcement.
+
+This hybrid approach also introduces **additional latency, cost, and dependencies**. A practical trade-off is to request explanations only when needed (for example, ambiguous decisions, manual review, or high-impact outcomes) instead of explaining every decision. The current PoC **does not implement this extra explanation step**; it compares the providers' decisions, quality, latency, and estimated costs only.
+
 ### Where each approach fits
 
 - **Jev:** classification, prioritization, proposition evaluation and combinations of these decisions.
@@ -82,9 +96,9 @@ For real systems, a semantic risk assessment is not an authorization control. Ex
 
 ## Use cases and examples
 
-Each use case has one editable Playground input and **five predefined demonstration scenarios** available in **Test Scenarios**.
+Each use case has one editable Playground input and **30 predefined demonstration scenarios** available in **Test Scenarios**.
 
-| ID | Use case | Jev capability | Five example scenarios |
+| ID | Use case | Jev capability | Scenario examples |
 | --- | --- | --- | --- |
 | UC1 | Intelligent Model Routing | Choice | Simple endpoint change; complex refactor; distributed consistency; missing context; documentation |
 | UC2 | Intelligent Lead Scoring | Score (0–4) | Ready to buy; early interest; no opportunity; need without purchase plan; qualified deal |
@@ -146,7 +160,7 @@ In this case, Jev is 56.9 times cheaper and 3.8 times faster than Haiku and 170.
 
 ### Test Scenarios — repeated scenarios
 
-Select a use case and the providers, then configure **1–20 iterations per scenario**. Every case has five scenarios, so **5 scenarios × 3 iterations = 15 rounds**, or **45 billable provider calls** when three providers are selected.
+Select a use case and the providers, then configure **1–20 iterations per scenario**. By default each case has 30 scenarios, so **30 scenarios × 3 iterations = 90 rounds**, or **270 provider calls** when three providers are selected.
 
 After execution, the UI reports:
 
@@ -160,7 +174,7 @@ History and reports are currently held in memory (backend process and current br
 
 #### Example: incident priorization
 
-In this case, we are going to execute three times the scenario of incident prioritization. We have five examples and the expected result of the priorization:
+In this case, we are going to execute three times the scenario of incident prioritization. The original five examples below are a subset of the 30 built-in scenarios and the expected result of the priorization:
 
 ```
 "incident-prioritization": [
@@ -267,3 +281,19 @@ Haiku 5.5 has a second published price tier for inputs greater than 100,000 toke
 - [TypeSafe — Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
 - [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
 - [Anthropic API documentation](https://docs.anthropic.com/)
+
+
+### Custom datasets
+
+In **Test Scenarios**, choose **Dataset source → Upload custom JSON dataset**. The app validates it via `POST /api/datasets/validate` before enabling the run. Validation rejects mismatched cases, repeated IDs, invalid fields, invalid reference types and datasets outside 1–200 scenarios (maximum file size 1 MB).
+
+```json
+{
+  "useCaseId": "email-classification",
+  "scenarios": [
+    {"id": "spam-es-01", "title": "Unsolicited offer", "input": "Asunto: Reclama tu premio ahora.", "expected": "SPAM"}
+  ]
+}
+```
+
+Each scenario has exactly `id`, `title`, `input`, `expected`. The `useCaseId` must match the current use case. **Choice:** one permitted category; **Score:** integer 0–4; **Noul:** 0 or 1; **Incident Triage:** `{"priority":4,"security_risk":0,"team":"BACKEND"}`; **Architecture:** `null` (qualitative review). Imported references are evaluated server-side with the execution and are not replaced by built-in references. Uploading does not persist files. User-provided labels are provisional, not verified ground truth.

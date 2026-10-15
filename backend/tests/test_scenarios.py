@@ -4,11 +4,11 @@ from app.scenarios import SCENARIOS, public_scenarios, reference, assess
 
 client = TestClient(app)
 
-def test_five_scenarios_for_each_use_case():
+def test_thirty_scenarios_for_each_use_case():
     assert len(SCENARIOS) == 7
-    assert all(len(items) == 5 for items in SCENARIOS.values())
+    assert all(len(items) == 30 for items in SCENARIOS.values())
     catalog = client.get("/api/use-cases").json()
-    assert all(len(item["scenarios"]) == 5 for item in catalog)
+    assert all(len(item["scenarios"]) == 30 for item in catalog)
 
 def test_reference_only_when_input_unchanged():
     case = public_scenarios("email-classification")[0]

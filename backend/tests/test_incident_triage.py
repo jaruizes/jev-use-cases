@@ -11,7 +11,7 @@ def tool_response(payload):
 def test_multi_case_catalog_and_scenarios():
     case = BY_ID["incident-triage"]
     assert case.kind == "multi"
-    assert len(public_scenarios(case.id)) == 5
+    assert len(public_scenarios(case.id)) == 30
 
 def test_multi_schema_contains_three_typed_fields():
     schema = decision_schema(BY_ID["incident-triage"])["input_schema"]
