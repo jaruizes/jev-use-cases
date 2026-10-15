@@ -1,0 +1,75 @@
+<div class="eyebrow">LIVE EXPERIMENT · PLAYGROUND</div>
+<div class="section-head">
+  <div>
+    <h1>Compare decisions,<br><em>not assumptions.</em></h1>
+    <p class="muted">Run identical inputs through real providers and inspect their outputs.</p>
+  </div>
+</div>
+
+@if (error()) {
+  <div class="alert">{{ error() }}</div>
+}
+
+@if (selected(); as current) {
+  <div class="work-layout">
+    <div class="panel">
+      <label class="field-label" for="case">01 / EXPERIMENT</label>
+      <select id="case" [ngModel]="current.id" (ngModelChange)="changeCase($event)">
+        @for (c of cases(); track c.id) {
+          <option [value]="c.id">{{ c.name }}</option>
+        }
+      </select>
+      <p class="muted">{{ current.description }}</p>
+
+      <label class="field-label" for="input">02 / INPUT CONTEXT</label>
+      <textarea id="input" [(ngModel)]="input" rows="9"></textarea>
+      <button class="secondary" (click)="input = current.example">↺ Reset to example</button>
+
+      <div class="field-label">03 / COMPARE PROVIDERS</div>
+      <div class="provider-list">
+        @for (p of current.providers; track p) {
+          <label class="check">
+            <input type="checkbox" [checked]="providers().includes(p)" (change)="toggle(p)">
+            <span>{{ p.toUpperCase() }}</span>
+          </label>
+        }
+      </div>
+
+      <button class="button run"
+              [disabled]="loading() || !input.trim() || providers().length === 0"
+              (click)="execute()">
+        {{ loading() ? 'Running providers…' : '▶ Run comparison' }}
+      </button>
+      <p class="note">Calls use your configured API keys. Jev and Claude may incur charges. No demo results are fabricated.</p>
+    </div>
+
+    <div class="panel info">
+      <span class="eyebrow">EXPERIMENT DESIGN</span>
+      <h2>{{ current.name }}</h2>
+      <p>{{ current.prompt }}</p>
+      <h3>Decision contract</h3>
+      <div class="criteria">
+        @if (current.kind === 'choice') {
+          @for (item of choiceEntries(current); track item.key) {
+            <div><strong>{{ item.key }}</strong><span>{{ item.value }}</span></div>
+          }
+        } @else if (current.kind === 'score') {
+          @for (item of scoreEntries(current); track $index) {
+            <div><strong>{{ $index }}</strong><span>{{ item }}</span></div>
+          }
+        } @else if (current.kind === 'noul') {
+          <div><strong>0…1</strong><span>Degree of support for the stated proposition</span></div>
+        } @else {
+          <div><strong>Markdown</strong><span>Open-ended architecture proposal with alternatives and trade-offs. Jev is not a generative LLM.</span></div>
+        }
+      </div>
+      <div class="tip">This is a proof of concept. Evaluator accuracy requires an independently reviewed dataset.</div>
+    </div>
+  </div>
+
+  @if (result(); as execution) {
+    <app-provider-results [execution]="execution" />
+  }
+} @else if (!error()) {
+  <p>Loading use cases…</p>
+}
