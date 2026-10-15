@@ -1,6 +1,6 @@
 <div class="eyebrow">REPEATABLE TESTS · REFERENCE SCENARIOS</div>
 <h1>Test <em>scenarios.</em></h1>
-<p class="muted">Run all five reference scenarios multiple times to compare Jev with Claude on quality, latency and cost.</p>
+<p class="muted">Run predefined or imported reference scenarios multiple times to compare Jev with Claude on quality, latency and cost.</p>
 
 <div class="test-config panel">
   <div>
@@ -8,13 +8,28 @@
     <select id="test-case" [ngModel]="selectedId" (ngModelChange)="changeCase($event)" [disabled]="running()">
       @for (c of cases(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
     </select>
-    <label class="field-label" for="iterations">02 / ITERATIONS PER SCENARIO</label>
+    <label class="field-label" for="source">02 / DATASET SOURCE</label>
+    <select id="source" [ngModel]="datasetMode" (ngModelChange)="changeMode($event)" [disabled]="running() || completed()">
+      <option value="built-in">Built-in ({{ selected?.scenarios?.length || 0 }} scenarios)</option>
+      <option value="custom">Upload custom JSON dataset</option>
+    </select>
+    @if (datasetMode === 'custom') {
+      <div class="dataset-upload">
+        <label class="field-label" for="dataset-file">UPLOAD DATASET (.JSON)</label>
+        <input id="dataset-file" type="file" accept=".json,application/json"
+               [disabled]="running() || completed() || validating()" (change)="uploadFile($event)" />
+        <p class="note">JSON format: useCaseId and scenarios containing id, title, input and expected.</p>
+        @if (validating()) { <p>Validating dataset…</p> }
+        @if (datasetStatus()) { <p class="dataset-valid">✓ {{ datasetName }} · {{ datasetStatus() }}</p> }
+      </div>
+    }
+    <label class="field-label" for="iterations">03 / ITERATIONS PER SCENARIO</label>02 / ITERATIONS PER SCENARIO</label>
     <input id="iterations" type="number" min="1" max="20" step="1" [(ngModel)]="iterations"
            [disabled]="running() || completed()" />
-    <p class="note">1–20 iterations. Each iteration runs all five scenarios.</p>
+    <p class="note">1–20 iterations. Each iteration runs every scenario in the selected dataset.</p>
   </div>
   <div>
-    <div class="field-label">03 / PROVIDERS</div>
+    <div class="field-label">04 / PROVIDERS</div>
     <div class="provider-list">
       @for (provider of selected?.providers ?? []; track provider) {
         <label class="check">
@@ -25,7 +40,7 @@
       }
     </div>
     <div class="test-plan">
-      <div><small>SCENARIOS</small><strong>5</strong></div>
+      <div><small>SCENARIOS</small><strong>{{ activeScenarios.length }}</strong></div>
       <div><small>ITERATIONS</small><strong>{{ iterations }}</strong></div>
       <div><small>ROUNDS</small><strong>{{ total }}</strong></div>
       <div><small>PROVIDER CALLS</small><strong>{{ total * providers().length }}</strong></div>
@@ -37,7 +52,7 @@
 @if (error()) { <div class="alert">{{ error() }}</div> }
 
 <div class="test-controls">
-  <button class="button" [disabled]="running() || completed() || !selected || !providers().length || iterations < 1 || iterations > 20" (click)="start()">
+  <button class="button" [disabled]="running() || completed() || !selected || !canRun || !providers().length || iterations < 1 || iterations > 20" (click)="start()">
     {{ running() ? 'Running scenarios…' : '▶ Start scenario test' }}
   </button>
   @if (running()) { <button class="secondary" (click)="stop()">Stop after current round</button> }
@@ -88,7 +103,7 @@
     }
 
     <section class="panel scenario-breakdown">
-      <div class="eyebrow">DRILL-DOWN · ALL FIVE SCENARIOS</div>
+      <div class="eyebrow">DRILL-DOWN · {{ activeScenarios.length }} SCENARIOS</div>
       <h2>What happened in each scenario?</h2>
       @for (detail of details(); track detail.scenario.id) {
         <details class="scenario-detail" open>

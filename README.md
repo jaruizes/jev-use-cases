@@ -82,9 +82,9 @@ For real systems, a semantic risk assessment is not an authorization control. Ex
 
 ## Use cases and examples
 
-Each use case has one editable Playground input and **five predefined demonstration scenarios** available in **Test Scenarios**.
+Each use case has one editable Playground input and **30 predefined demonstration scenarios** available in **Test Scenarios**.
 
-| ID | Use case | Jev capability | Five example scenarios |
+| ID | Use case | Jev capability | Scenario examples |
 | --- | --- | --- | --- |
 | UC1 | Intelligent Model Routing | Choice | Simple endpoint change; complex refactor; distributed consistency; missing context; documentation |
 | UC2 | Intelligent Lead Scoring | Score (0–4) | Ready to buy; early interest; no opportunity; need without purchase plan; qualified deal |
@@ -146,7 +146,7 @@ In this case, Jev is 56.9 times cheaper and 3.8 times faster than Haiku and 170.
 
 ### Test Scenarios — repeated scenarios
 
-Select a use case and the providers, then configure **1–20 iterations per scenario**. Every case has five scenarios, so **5 scenarios × 3 iterations = 15 rounds**, or **45 billable provider calls** when three providers are selected.
+Select a use case and the providers, then configure **1–20 iterations per scenario**. By default each case has 30 scenarios, so **30 scenarios × 3 iterations = 90 rounds**, or **270 provider calls** when three providers are selected.
 
 After execution, the UI reports:
 
@@ -160,7 +160,7 @@ History and reports are currently held in memory (backend process and current br
 
 #### Example: incident priorization
 
-In this case, we are going to execute three times the scenario of incident prioritization. We have five examples and the expected result of the priorization:
+In this case, we are going to execute three times the scenario of incident prioritization. The original five examples below are a subset of the 30 built-in scenarios and the expected result of the priorization:
 
 ```
 "incident-prioritization": [
@@ -267,3 +267,19 @@ Haiku 5.5 has a second published price tier for inputs greater than 100,000 toke
 - [TypeSafe — Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
 - [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
 - [Anthropic API documentation](https://docs.anthropic.com/)
+
+
+### Custom datasets
+
+In **Test Scenarios**, choose **Dataset source → Upload custom JSON dataset**. The app validates it via `POST /api/datasets/validate` before enabling the run. Validation rejects mismatched cases, repeated IDs, invalid fields, invalid reference types and datasets outside 1–200 scenarios (maximum file size 1 MB).
+
+```json
+{
+  "useCaseId": "email-classification",
+  "scenarios": [
+    {"id": "spam-es-01", "title": "Unsolicited offer", "input": "Asunto: Reclama tu premio ahora.", "expected": "SPAM"}
+  ]
+}
+```
+
+Each scenario has exactly `id`, `title`, `input`, `expected`. The `useCaseId` must match the current use case. **Choice:** one permitted category; **Score:** integer 0–4; **Noul:** 0 or 1; **Incident Triage:** `{"priority":4,"security_risk":0,"team":"BACKEND"}`; **Architecture:** `null` (qualitative review). Imported references are evaluated server-side with the execution and are not replaced by built-in references. Uploading does not persist files. User-provided labels are provisional, not verified ground truth.
