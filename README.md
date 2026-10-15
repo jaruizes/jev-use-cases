@@ -2,9 +2,13 @@
 
 > **When should you use Jev instead of a generative LLM?**
 
+
+
 Jev Decision Lab is an interactive proof of concept comparing **TypeSafe Jev** with **Claude Haiku** and **Claude Sonnet** in realistic decision workflows. It measures the actual provider responses and latency, estimates their token costs, and lets you explore cases in which a generative model is required instead.
 
 The objective is to understand the **different roles of semantic decision models and generative LLMs**, not to assume that Jev always wins.
+
+
 
 <img src="docs/pictures/introduction.jpg" alt="introduction" style="zoom:50%;" />
 
@@ -228,53 +232,7 @@ Never commit `.env` or put credentials in Angular code. The keys are only passed
 docker compose up --build -d
 ```
 
-The application is available at:
-
-| Service | URL |
-| --- | --- |
-| Angular UI | http://localhost:4200 |
-| API documentation (Swagger) | http://localhost:8000/docs |
-| API health | http://localhost:8000/api/health |
-| Playground: Incident Triage | http://localhost:4200/playground/incident-triage |
-| Test Scenarios | http://localhost:4200/test-scenarios |
-| Pricing Settings | http://localhost:4200/pricing |
-
-
-
-### 4. Inspect logs and stop
-
-```bash
-docker compose logs -f api frontend
-docker compose down
-```
-
-After changing `.env`, recreate the API container:
-
-```bash
-docker compose up -d --force-recreate api
-```
-
-
-
-### 5. Run tests
-
-Run the backend tests from your local Python environment:
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pytest -q
-```
-
-The frontend can be built separately using Node.js/npm:
-
-```bash
-cd frontend
-npm install
-npm run build
-```
+The application will be available at http://localhost:4200
 
 
 
@@ -292,11 +250,7 @@ The Jev list price comes from [TypeSafe's System One announcement](https://types
 
 The value of this project is showing the **boundary between bounded semantic decisions and open-ended generation**, along with measured behavior on specific examples — not asserting that one model universally outperforms another.
 
-## References
 
-- [TypeSafe — Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
-- [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
-- [Anthropic API documentation](https://docs.anthropic.com/)
 
 ## Pricing Settings
 
@@ -305,3 +259,11 @@ Open **Pricing Settings** in the sidebar to review or edit Jev, Haiku 5.5 and So
 The `.env` file holds provider API keys and optional model identifiers. If you created `.env` before this update, **update** `CLAUDE_HAIKU_MODEL=claude-haiku-5-5` and `CLAUDE_SONNET_MODEL=claude-sonnet-5-5` there: copying a new `.env.example` does not overwrite the existing file. The pricing database stores editable rates; it does not store API keys.
 
 Haiku 5.5 has a second published price tier for inputs greater than 100,000 tokens ($0.50 input and $2.50 output per MTok); this tier is used automatically at default prices. User-edited rates take precedence.
+
+
+
+## References
+
+- [TypeSafe — Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
+- [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
+- [Anthropic API documentation](https://docs.anthropic.com/)
