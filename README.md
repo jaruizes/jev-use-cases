@@ -4,7 +4,7 @@
 
 A visual, reproducible proof of concept (PoC) to compare **Jev**, **Claude Haiku**, **Claude Sonnet** and **deterministic rules**, highlighting where structured decisions win on quality, latency or cost, and where an LLM is essential.
 
-**Status:** Design specification. The UI, backend and benchmarks are planned, not yet implemented. This project does not assume that Jev will win any benchmark.
+**Status:** v0.1 Playground implemented (Angular + FastAPI). The bulk benchmark runner, reference datasets, persistence and pricing analysis are planned. This project does not assume that Jev will win any benchmark. See [implementation status](IMPLEMENTATION.md).
 
 ## Goals
 
@@ -195,7 +195,7 @@ Suggested acceptance criteria must be **configurable and validated against real 
 
 ## Getting started (planned)
 
-**The implementation is not yet present.** After the application is built, the intended workflow is:
+**Playground implemented:** start Angular and FastAPI locally with Docker Compose:
 
 ```bash
 cp .env.example .env
