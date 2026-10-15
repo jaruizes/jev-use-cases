@@ -124,7 +124,7 @@ In this case, Jev is 59.4 times cheaper than Haiku and 178.1 times cheaper than 
 
 
 
-Example: UC7 (Incident Triage · Multi-decision)
+#### Example: UC7 (Incident Triage · Multi-decision)
 
 In this case we are going to ask several tasks at the same time: scoring, detection of security risk and the responsible team related to an incident
 
