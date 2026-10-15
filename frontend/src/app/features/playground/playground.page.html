@@ -21,23 +21,11 @@
       </select>
       <p class="muted">{{ current.description }}</p>
 
-      <label class="field-label" for="scenario">02 / REFERENCE SCENARIOS</label>
-      <select id="scenario" [ngModel]="selectedScenarioId" (ngModelChange)="useScenario($event)">
-        <option value="">Custom input (not scored)</option>
-        @for (s of current.scenarios; track s.id) {
-          <option [value]="s.id">{{ s.title }}</option>
-        }
-      </select>
-      @if (selectedScenarioId) {
-        <p class="reference-label">
-          Expected: <strong>{{ current.kind === 'generation' ? 'Qualitative review' : expectedLabel(current) }}</strong>
-        </p>
-      }
-      <label class="field-label" for="input">03 / INPUT CONTEXT</label>
-      <textarea id="input" [ngModel]="input" (ngModelChange)="editInput($event)" rows="9"></textarea>
-      <button class="secondary" (click)="editInput(current.example)">↺ Reset to example</button>
+      <label class="field-label" for="input">02 / INPUT CONTEXT</label>
+      <textarea id="input" [(ngModel)]="input" rows="9"></textarea>
+      <button class="secondary" (click)="input = current.example">↺ Reset to example</button>
 
-      <div class="field-label">04 / COMPARE PROVIDERS</div>
+      <div class="field-label">03 / COMPARE PROVIDERS</div>
       <div class="provider-list">
         @for (p of current.providers; track p) {
           <label class="check">
@@ -52,10 +40,6 @@
               (click)="execute()">
         {{ loading() ? 'Running providers…' : '▶ Run comparison' }}
       </button>
-      <button class="secondary" [disabled]="loading() || providers().length === 0" (click)="runAllScenarios()">
-        {{ runningAll() ? 'Running ' + batchProgress() + '/5…' : '▶ Run all 5 reference scenarios' }}
-      </button>
-      <p class="note">Reference labels are illustrative and should be reviewed by a domain expert. Scores 0–4 count as correct within ±0.5; Noul uses threshold 0.5. Custom inputs are not scored.</p>
       <p class="note">Calls use your configured API keys. Jev and Claude may incur charges. No demo results are fabricated.</p>
     </div>
 
@@ -90,7 +74,7 @@
   </div>
 
   @if (result(); as execution) {
-    <app-provider-results [execution]="execution" [quality]="quality()" />
+    <app-provider-results [execution]="execution" />
   }
 } @else if (!error()) {
   <p>Loading use cases…</p>
