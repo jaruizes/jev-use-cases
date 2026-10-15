@@ -17,17 +17,6 @@ def decision_schema(case) -> dict:
             "input_schema": {"type": "object", "properties": properties,
                              "required": list(properties), "additionalProperties": False},
         }
-    if case.kind == "multi":
-        if set(payload) != {"priority", "security_risk", "team"}:
-            raise ValueError("Missing or extra incident triage decisions")
-        priority, risk, team = payload["priority"], payload["security_risk"], payload["team"]
-        if type(priority) is not int or not 0 <= priority <= 4:
-            raise ValueError("Invalid triage priority")
-        if type(risk) not in (float, int) or not 0 <= risk <= 1:
-            raise ValueError("Invalid triage security probability")
-        if not isinstance(team, str) or team not in case.criteria["team"]:
-            raise ValueError("Invalid triage team")
-        return {"priority": priority, "security_risk": float(risk), "team": team}, payload
     if case.kind == "choice":
         value = {"type": "string", "enum": list(case.criteria.keys())}
     elif case.kind == "score":
@@ -54,8 +43,21 @@ def extract_decision(response, case):
     if len(tools) != 1:
         raise ValueError("Claude did not provide exactly one structured decision")
     payload = tools[0].input
-    if not isinstance(payload, dict) or "value" not in payload:
+    if not isinstance(payload, dict):
+        raise ValueError("Invalid Claude decision tool payload")
+    if case.kind != "multi" and "value" not in payload:
         raise ValueError("Claude decision tool payload is missing value")
+    if case.kind == "multi":
+        if set(payload) != {"priority", "security_risk", "team"}:
+            raise ValueError("Missing or extra incident triage decisions")
+        priority, risk, team = payload["priority"], payload["security_risk"], payload["team"]
+        if type(priority) is not int or not 0 <= priority <= 4:
+            raise ValueError("Invalid triage priority")
+        if type(risk) not in (float, int) or not 0 <= risk <= 1:
+            raise ValueError("Invalid triage security probability")
+        if not isinstance(team, str) or team not in case.criteria["team"]:
+            raise ValueError("Invalid triage team")
+        return {"priority": priority, "security_risk": float(risk), "team": team}, payload
     value = payload["value"]
     if case.kind == "choice":
         if not isinstance(value, str) or value not in case.criteria:
@@ -84,6 +86,9 @@ async def evaluate(case, text: str, provider: str) -> dict:
         kwargs["system"] = case.prompt + "\nRespond with Markdown."
     else:
         constraint = (
+            "Return priority (0–4), security_risk (0–1), and team (PLATFORM/BACKEND/SECURITY) based on the incident. "
+            "Use the field definitions in the tool schema."
+            if case.kind == "multi" else
             f"Allowed choices and definitions: {json.dumps(case.criteria)}."
             if case.kind == "choice" else
             f"Ordered scoring rubric indexed from 0: {json.dumps(case.criteria)}."
