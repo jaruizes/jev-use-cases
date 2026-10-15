@@ -40,3 +40,15 @@ Implemented: per-request estimated USD cost and projected cost per 1,000 equival
 By default Jev uses TypeSafe's published $0.042 per million input tokens and free output tokens ([official announcement, 2026-09-15](https://typesafe.ai/blog/introducing-system-one-models-and-jev)). Set `JEV_INPUT_USD_PER_MTOK` in `.env` only to override the published rate for a different agreement. Estimates are not actual invoices. Restart/recreate the API after editing .env.
 
 Not in M1: batch/caching tariffs, invoice reconciliation, benchmarking distributions, authoritative dataset assessment, persistence.
+
+## Demo scenarios and quality (M1.1)
+
+- Six use cases now offer five selectable sample scenarios apiece, plus a "run all five" action.
+- For the five structured-decision cases, each scenario contains an illustrative reference decision. The backend records per-execution matches and a per-provider reference agreement rate across the latest attempt at each scenario in the current session.
+- Choice: strict match; Score: absolute difference <= 0.5 to support continuous Jev scoring; Noul: proposition true at >= 0.5.
+- Architecture generation: five diverse prompts, **no automatic correctness score**. Manual architectural review is needed.
+- A custom or edited input has no reference score, even if its contents resemble a preset.
+- Playground outputs now summarize Jev-vs-Haiku/Sonnet cost and latency ratios where valid positive measurements exist; missing data displays N/A.
+- Running all scenarios makes real provider calls (may incur charges); runs are sequential and reference summaries are session-only. This is not an expert-reviewed benchmark dataset.
+
+Use `pytest -q` from `backend` to execute the new scenario and quality tests; Angular and live APIs still need verification in a local Docker build.
