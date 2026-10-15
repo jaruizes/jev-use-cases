@@ -1,0 +1,112 @@
+<div class="eyebrow">REPEATABLE TESTS · REFERENCE SCENARIOS</div>
+<h1>Test <em>scenarios.</em></h1>
+<p class="muted">Run all five reference scenarios multiple times to compare Jev with Claude on quality, latency and cost.</p>
+
+<div class="test-config panel">
+  <div>
+    <label class="field-label" for="test-case">01 / USE CASE</label>
+    <select id="test-case" [ngModel]="selectedId" (ngModelChange)="changeCase($event)" [disabled]="running()">
+      @for (c of cases(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+    </select>
+    <label class="field-label" for="iterations">02 / ITERATIONS PER SCENARIO</label>
+    <input id="iterations" type="number" min="1" max="20" step="1" [(ngModel)]="iterations"
+           [disabled]="running() || completed()" />
+    <p class="note">1–20 iterations. Each iteration runs all five scenarios.</p>
+  </div>
+  <div>
+    <div class="field-label">03 / PROVIDERS</div>
+    <div class="provider-list">
+      @for (provider of selected?.providers ?? []; track provider) {
+        <label class="check">
+          <input type="checkbox" [checked]="providers().includes(provider)" [disabled]="running() || completed()"
+                 (change)="toggle(provider)">
+          <span>{{ provider.toUpperCase() }}</span>
+        </label>
+      }
+    </div>
+    <div class="test-plan">
+      <div><small>SCENARIOS</small><strong>5</strong></div>
+      <div><small>ITERATIONS</small><strong>{{ iterations }}</strong></div>
+      <div><small>ROUNDS</small><strong>{{ total }}</strong></div>
+      <div><small>PROVIDER CALLS</small><strong>{{ total * providers().length }}</strong></div>
+    </div>
+    <p class="note">Each provider call is real and may incur charges. The requests are run sequentially by scenario; providers within each round run in parallel.</p>
+  </div>
+</div>
+
+@if (error()) { <div class="alert">{{ error() }}</div> }
+
+<div class="test-controls">
+  <button class="button" [disabled]="running() || completed() || !selected || !providers().length || iterations < 1 || iterations > 20" (click)="start()">
+    {{ running() ? 'Running scenarios…' : '▶ Start scenario test' }}
+  </button>
+  @if (running()) { <button class="secondary" (click)="stop()">Stop after current round</button> }
+  @if (completed()) { <button class="secondary" (click)="clearResults()">↺ Configure another run</button> }
+</div>
+
+@if (running() || completed()) {
+  <section class="panel test-progress">
+    <div class="card-top"><h3>{{ running() ? 'Test in progress' : 'Test finished' }}</h3><strong>{{ progress() }} / {{ total }} rounds</strong></div>
+    <div class="comparison-track"><div class="comparison-fill" [style.width.%]="total ? progress() * 100 / total : 0"></div></div>
+  </section>
+}
+
+@if (runs().length > 0) {
+  <section class="test-report">
+    <div class="section-head"><div><span class="eyebrow">MEASURED RESULTS</span><h2>Quality, speed &amp; cost</h2></div>
+      <span class="muted">{{ runs().length }} completed rounds · {{ providers().length }} providers</span></div>
+    <div class="test-summary-grid">
+      @for (row of rows(); track row.provider) {
+        <div class="panel summary-provider">
+          <span class="eyebrow">{{ row.provider.toUpperCase() }}</span>
+          <div class="summary-accuracy">{{ row.accuracy == null ? 'N/A' : (row.accuracy | number:'1.0-1') + '%' }}</div>
+          <p>Reference agreement · {{ row.correct }} / {{ row.evaluated }} evaluated</p>
+          <div class="summary-metrics"><span>Avg. latency</span><strong>{{ row.avgLatency == null ? 'N/A' : (row.avgLatency | number:'1.0-1') + ' ms' }}</strong></div>
+          <div class="summary-metrics"><span>Total estimated cost</span><strong>{{ money(row.totalCost) }}</strong></div>
+          <div class="summary-metrics"><span>Avg. cost / call</span><strong>{{ money(row.avgCost) }}</strong></div>
+          <div class="summary-metrics"><span>Successful / failed</span><strong>{{ row.successes }} / {{ row.errors }}</strong></div>
+        </div>
+      }
+    </div>
+    @if (selected?.kind !== 'generation') {
+      <p class="note">Agreement against illustrative reference labels, not an expert-validated accuracy benchmark. Failed calls are excluded from agreement but counted separately.</p>
+    } @else {
+      <p class="note">Architecture generation requires expert qualitative review. Accuracy is N/A by design.</p>
+    }
+
+    @if (providers().includes('jev') && (providers().includes('haiku') || providers().includes('sonnet'))) {
+      <div class="advantage-summary">
+        <h3>Observed Jev advantage · average per successful call</h3>
+        <div class="advantage-grid">
+          <div><small>Cost vs Haiku</small><strong>{{ ratio('cost','haiku') }}</strong><span>cost ratio</span></div>
+          <div><small>Cost vs Sonnet</small><strong>{{ ratio('cost','sonnet') }}</strong><span>cost ratio</span></div>
+          <div><small>Latency vs Haiku</small><strong>{{ ratio('latency','haiku') }}</strong><span>latency ratio</span></div>
+          <div><small>Latency vs Sonnet</small><strong>{{ ratio('latency','sonnet') }}</strong><span>latency ratio</span></div>
+        </div>
+        <p class="note">Ratio = Claude / Jev. Values above 1× favor Jev; lower values favor Claude. Cost is estimated, not invoiced.</p>
+      </div>
+    }
+
+    <section class="panel scenario-breakdown">
+      <div class="eyebrow">DRILL-DOWN · ALL FIVE SCENARIOS</div>
+      <h2>What happened in each scenario?</h2>
+      @for (detail of details(); track detail.scenario.id) {
+        <details class="scenario-detail" open>
+          <summary>{{ detail.scenario.title }} <span>Expected: {{ detail.scenario.expected ?? 'Manual review' }}</span></summary>
+          <p class="muted small">{{ detail.scenario.input }}</p>
+          <div class="detail-grid">
+            @for (value of detail.values; track value.provider) {
+              <div class="detail-provider">
+                <strong>{{ value.provider.toUpperCase() }}</strong>
+                <p>Matches: {{ value.correct }} / {{ value.evaluated }} · Errors: {{ value.failed }}</p>
+                <p>Outputs: {{ value.responses.join(', ') || '—' }}</p>
+                <p>Average latency: {{ value.avgLatency == null ? 'N/A' : (value.avgLatency | number:'1.0-1') + ' ms' }}</p>
+                <p>Average cost: {{ money(value.avgCost) }}</p>
+              </div>
+            }
+          </div>
+        </details>
+      }
+    </section>
+  </section>
+}
