@@ -282,13 +282,13 @@ npm run build
 
 Estimates are based on reported tokens, a versioned price table and the configured API model. The currently configured rates are:
 
-| Provider/model | USD per 1M input tokens | USD per 1M output tokens |
-| --- | ---: | ---: |
-| Jev | 0.042 | 0 |
-| Claude Haiku 5.5 (≤100k input) | 0.10 | 0.50 |
-| Claude Sonnet 5.5 | 2 | 10 |
+| Provider/model | USD per 1M input tokens | USD per 1M output tokens | Official pricing source |
+| --- | ---: | ---: | --- |
+| Jev | 0.042 | 0 | [TypeSafe](https://typesafe.ai/blog/introducing-system-one-models-and-jev) |
+| Claude Haiku 5.5 (≤100k input) | 0.10 | 0.50 | [Anthropic official pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+| Claude Sonnet 5.5 | 2 | 10 | [Anthropic official pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
 
-The Jev list price comes from [TypeSafe's System One announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). Claude model rates come from [Haiku 4.5](https://www.anthropic.com/news/claude-haiku-5-5) and [Sonnet 4.5](https://www.anthropic.com/news/claude-sonnet-5-5). These are **estimates**, not invoices; they exclude negotiated terms, taxes, caching and batch effects.
+The Jev list price comes from [TypeSafe's System One announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). **Anthropic pricing source:** [Official Claude API pricing documentation](https://platform.claude.com/docs/en/about-claude/pricing), including the **Claude Haiku 5.5** and **Claude Sonnet 5.5** model rates and Haiku's long-prompt tier. These are **estimates**, not invoices; they exclude negotiated terms, taxes, caching and batch effects.
 
 The value of this project is showing the **boundary between bounded semantic decisions and open-ended generation**, along with measured behavior on specific examples — not asserting that one model universally outperforms another.
 
