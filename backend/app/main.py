@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -10,6 +11,7 @@ from pydantic import BaseModel, Field
 from .catalog import CASES, BY_ID, public_case
 from .providers import claude, jev, rules
 
+logger = logging.getLogger("jev_decision_lab")
 app = FastAPI(title="Jev Decision Lab API", version="0.1.0")
 origins = [s.strip() for s in os.getenv("CORS_ORIGINS", "http://localhost:4200").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["*"])
@@ -59,9 +61,35 @@ async def execute(body: ExecuteRequest):
                 data = await claude.evaluate(case, body.input, provider)
             return {"provider": provider, "status": "success", **data, "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
         except Exception as exc:
-            # Do not return raw exception messages that could contain credentials or request internals.
-            kind = "configuration" if isinstance(exc, ValueError) and "not configured" in str(exc) else "provider_error"
-            return {"provider": provider, "status": "error", "error": kind, "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
+            # Only log a sanitized summary: never log request bodies, headers,
+            # credentials, provider response text or the full exception traceback.
+            from anthropic import APIStatusError, APIConnectionError, APITimeoutError
+            if isinstance(exc, APIStatusError):
+                kind = "anthropic_api_error"
+                detail = f"Anthropic HTTP {exc.status_code}; verify model access, model ID, credits and account permissions"
+                logger.error("provider=%s use_case=%s category=%s http_status=%s exception_type=%s",
+                             provider, case.id, kind, exc.status_code, type(exc).__name__)
+            elif isinstance(exc, (APIConnectionError, APITimeoutError)):
+                kind = "anthropic_connection_error"
+                detail = "Anthropic connection failure or timeout"
+                logger.error("provider=%s use_case=%s category=%s exception_type=%s",
+                             provider, case.id, kind, type(exc).__name__)
+            elif isinstance(exc, ValueError) and "not configured" in str(exc):
+                kind = "configuration"
+                detail = "Provider API key is not configured"
+                logger.error("provider=%s use_case=%s category=%s", provider, case.id, kind)
+            elif isinstance(exc, (ValueError, KeyError, TypeError)):
+                kind = "invalid_provider_response"
+                detail = "Provider response could not be parsed or validated"
+                logger.error("provider=%s use_case=%s category=%s exception_type=%s",
+                             provider, case.id, kind, type(exc).__name__)
+            else:
+                kind = "provider_error"
+                detail = "Unexpected provider failure; check server logs"
+                logger.error("provider=%s use_case=%s category=%s exception_type=%s",
+                             provider, case.id, kind, type(exc).__name__)
+            return {"provider": provider, "status": "error", "error": kind,
+                    "detail": detail, "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
     result = {
         "id": str(uuid4()), "useCaseId": case.id, "input": body.input,
         "timestamp": datetime.now(timezone.utc).isoformat(),
