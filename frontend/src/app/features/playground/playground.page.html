@@ -47,6 +47,12 @@
       <span class="eyebrow">EXPERIMENT DESIGN</span>
       <h2>{{ current.name }}</h2>
       <p>{{ current.prompt }}</p>
+      @if (current.kind === 'generation') {
+        <div class="jev-limitation" role="note">
+          <strong>JEV IS NOT AN LLM — IT CANNOT GENERATE CONTENT</strong>
+          <p>Jev can choose, score and evaluate bounded propositions, but it cannot generate an open-ended architecture or migration plan. This use case requires a generative LLM.</p>
+        </div>
+      }
       <h3>Decision contract</h3>
       <div class="criteria">
         @if (current.kind === 'choice') {

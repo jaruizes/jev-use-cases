@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from .catalog import CASES, BY_ID, public_case
-from .providers import claude, jev, rules
+from .providers import claude, jev
 
 logger = logging.getLogger("jev_decision_lab")
 app = FastAPI(title="Jev Decision Lab API", version="0.1.0")
@@ -19,7 +19,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", 
 class ExecuteRequest(BaseModel):
     useCaseId: str
     input: str = Field(min_length=1, max_length=20000)
-    providers: list[Literal["jev", "haiku", "sonnet", "rules"]] = Field(min_length=1, max_length=4)
+    providers: list[Literal["jev", "haiku", "sonnet"]] = Field(min_length=1, max_length=3)
 
 RUNS: dict[str, dict] = {}
 
@@ -51,12 +51,10 @@ async def execute(body: ExecuteRequest):
     async def run(provider: str) -> dict[str, Any]:
         started = time.perf_counter()
         try:
-            if case.kind == "generation" and provider in ("jev", "rules"):
+            if case.kind == "generation" and provider == "jev":
                 return {"provider": provider, "status": "unsupported", "error": "This provider does not generate open-ended architecture artifacts", "latencyMs": 0}
             if provider == "jev":
                 data = await jev.evaluate(case, body.input)
-            elif provider == "rules":
-                data = rules.evaluate(case, body.input)
             else:
                 data = await claude.evaluate(case, body.input, provider)
             return {"provider": provider, "status": "success", **data, "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
