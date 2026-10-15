@@ -17,7 +17,7 @@
             <strong>{{ r.value }}</strong>
           }
         } @else {
-          <span class="muted">{{ r.error }}</span>
+          <span class="muted">{{ r.detail || r.error }}</span>
         }
       </div>
       <div class="stats">
