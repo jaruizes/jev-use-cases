@@ -148,15 +148,15 @@ Edit `.env` with your own credentials:
 ```dotenv
 TYPESAFE_API_KEY=your-typesafe-key
 ANTHROPIC_API_KEY=your-anthropic-key
-CLAUDE_HAIKU_MODEL=claude-haiku-4-5
-CLAUDE_SONNET_MODEL=claude-sonnet-4-5
+CLAUDE_HAIKU_MODEL=claude-haiku-5-5
+CLAUDE_SONNET_MODEL=claude-sonnet-5-5
 CORS_ORIGINS=http://localhost:4200
 
 # Optional Jev pricing override, USD per million input tokens:
 # JEV_INPUT_USD_PER_MTOK=0.042
 ```
 
-Never commit `.env` or put credentials in Angular code. The keys are only passed to the backend.
+Never commit `.env` or put credentials in Angular code. The keys are only passed to the backend. **Pricing Settings is intended for local use only and has no authentication; do not expose the service publicly.**
 
 ### 3. Build and start
 
@@ -173,6 +173,7 @@ The application is available at:
 | API health | http://localhost:8000/api/health |
 | Playground: Incident Triage | http://localhost:4200/playground/incident-triage |
 | Test Scenarios | http://localhost:4200/test-scenarios |
+| Pricing Settings | http://localhost:4200/pricing |
 
 ### 4. Inspect logs and stop
 
@@ -214,10 +215,10 @@ Estimates are based on reported tokens, a versioned price table and the configur
 | Provider/model | USD per 1M input tokens | USD per 1M output tokens |
 | --- | ---: | ---: |
 | Jev | 0.042 | 0 |
-| Claude Haiku 4.5 | 1 | 5 |
-| Claude Sonnet 4.5 | 3 | 15 |
+| Claude Haiku 5.5 (≤100k input) | 0.10 | 0.50 |
+| Claude Sonnet 5.5 | 2 | 10 |
 
-The Jev list price comes from [TypeSafe's System One announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). Claude model rates come from [Haiku 4.5](https://www.anthropic.com/news/claude-haiku-4-5) and [Sonnet 4.5](https://www.anthropic.com/news/claude-sonnet-4-5). These are **estimates**, not invoices; they exclude negotiated terms, taxes, caching and batch effects.
+The Jev list price comes from [TypeSafe's System One announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). Claude model rates come from [Haiku 4.5](https://www.anthropic.com/news/claude-haiku-5-5) and [Sonnet 4.5](https://www.anthropic.com/news/claude-sonnet-5-5). These are **estimates**, not invoices; they exclude negotiated terms, taxes, caching and batch effects.
 
 The value of this project is showing the **boundary between bounded semantic decisions and open-ended generation**, along with measured behavior on specific examples — not asserting that one model universally outperforms another.
 
@@ -226,3 +227,11 @@ The value of this project is showing the **boundary between bounded semantic dec
 - [TypeSafe — Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
 - [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
 - [Anthropic API documentation](https://docs.anthropic.com/)
+
+## Pricing Settings
+
+Open **Pricing Settings** in the sidebar to review or edit Jev, Haiku 5.5 and Sonnet 5.5 input/output USD-per-million-token prices. Published rates are preloaded; you can edit them and save without restarting the application. They are kept in an SQLite database on the `pricing-data` Docker volume and apply to future requests. Existing results retain the tariff snapshot used at execution time.
+
+The `.env` file holds provider API keys and optional model identifiers. If you created `.env` before this update, **update** `CLAUDE_HAIKU_MODEL=claude-haiku-5-5` and `CLAUDE_SONNET_MODEL=claude-sonnet-5-5` there: copying a new `.env.example` does not overwrite the existing file. The pricing database stores editable rates; it does not store API keys.
+
+Haiku 5.5 has a second published price tier for inputs greater than 100,000 tokens ($0.50 input and $2.50 output per MTok); this tier is used automatically at default prices. User-edited rates take precedence.
