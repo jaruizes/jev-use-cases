@@ -207,7 +207,20 @@ As we can see in the picture, quality is similar between Jev and LLMs but cost a
 
 ![test-scenario](docs/pictures/test-scenario.jpg)
 
+#### Custom datasets
 
+In **Test Scenarios**, choose **Dataset source → Upload custom JSON dataset**. The app validates it via `POST /api/datasets/validate` before enabling the run. Validation rejects mismatched cases, repeated IDs, invalid fields, invalid reference types and datasets outside 1–200 scenarios (maximum file size 1 MB).
+
+```json
+{
+  "useCaseId": "email-classification",
+  "scenarios": [
+    {"id": "spam-es-01", "title": "Unsolicited offer", "input": "Asunto: Reclama tu premio ahora.", "expected": "SPAM"}
+  ]
+}
+```
+
+Each scenario has exactly `id`, `title`, `input`, `expected`. The `useCaseId` must match the current use case. **Choice:** one permitted category; **Score:** integer 0–4; **Noul:** 0 or 1; **Incident Triage:** `{"priority":4,"security_risk":0,"team":"BACKEND"}`; **Architecture:** `null` (qualitative review). Imported references are evaluated server-side with the execution and are not replaced by built-in references. Uploading does not persist files. User-provided labels are provisional, not verified ground truth.
 
 
 
@@ -295,18 +308,3 @@ Haiku 5.5 has a second published price tier for inputs greater than 100,000 toke
 - [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
 - [Anthropic API documentation](https://docs.anthropic.com/)
 
-
-### Custom datasets
-
-In **Test Scenarios**, choose **Dataset source → Upload custom JSON dataset**. The app validates it via `POST /api/datasets/validate` before enabling the run. Validation rejects mismatched cases, repeated IDs, invalid fields, invalid reference types and datasets outside 1–200 scenarios (maximum file size 1 MB).
-
-```json
-{
-  "useCaseId": "email-classification",
-  "scenarios": [
-    {"id": "spam-es-01", "title": "Unsolicited offer", "input": "Asunto: Reclama tu premio ahora.", "expected": "SPAM"}
-  ]
-}
-```
-
-Each scenario has exactly `id`, `title`, `input`, `expected`. The `useCaseId` must match the current use case. **Choice:** one permitted category; **Score:** integer 0–4; **Noul:** 0 or 1; **Incident Triage:** `{"priority":4,"security_risk":0,"team":"BACKEND"}`; **Architecture:** `null` (qualitative review). Imported references are evaluated server-side with the execution and are not replaced by built-in references. Uploading does not persist files. User-provided labels are provisional, not verified ground truth.

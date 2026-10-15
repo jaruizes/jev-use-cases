@@ -80,7 +80,7 @@
           <div class="summary-metrics"><span>Total estimated cost</span><strong>{{ money(row.totalCost) }}</strong></div>
           <div class="summary-metrics"><span>Avg. cost / call</span><strong>{{ money(row.avgCost) }}</strong></div>
           <div class="summary-metrics"><span>Correct decisions</span><strong>{{ row.correct }}</strong></div>
-          <div class="summary-metrics"><span>Incorrect decisions</span><strong [class.decision-error]="row.incorrect > 0">{{ row.incorrect }}</strong></div>
+          <div class="summary-metrics"><span [class.decision-error]="row.incorrect > 0">Incorrect decisions</span><strong [class.decision-error]="row.incorrect > 0">{{ row.incorrect }}</strong></div>
           <div class="summary-metrics"><span>Successful API calls</span><strong>{{ row.successes }}</strong></div>
           <div class="summary-metrics"><span>Failed API calls</span><strong>{{ row.errors }}</strong></div>
         </div>
