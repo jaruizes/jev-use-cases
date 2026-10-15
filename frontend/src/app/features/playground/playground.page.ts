@@ -2,8 +2,8 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { switchMap } from 'rxjs';
-import { UseCase, ProviderId, Execution, Scenario, QualitySummary } from '../../core/models';
+import { firstValueFrom, switchMap } from 'rxjs';
+import { UseCase, ProviderId, Execution, QualitySummary } from '../../core/models';
 import { UseCasesApiService } from '../../services/use-cases-api.service';
 import { ExecutionsApiService } from '../../services/executions-api.service';
 import { ProviderResultsComponent } from './components/provider-results.component';
@@ -95,8 +95,7 @@ export class PlaygroundPage {
     this.error.set('');
     try {
       for (const [index, scenario] of useCase.scenarios.entries()) {
-        const execution = await import('rxjs').then(({firstValueFrom}) =>
-          firstValueFrom(this.executionApi.execute(useCase.id, scenario.input, providers, scenario.id)));
+        const execution = await firstValueFrom(this.executionApi.execute(useCase.id, scenario.input, providers, scenario.id));
         this.batchProgress.set(index + 1);
         this.selectedScenarioId = scenario.id;
         this.input = scenario.input;
