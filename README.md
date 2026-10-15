@@ -82,7 +82,20 @@ If a business process requires an understandable justification, one possible arc
 
 **Important limitation:** this is a *post-hoc explanation*, **not Jev's own reasoning or proof that Jev relied on the cited evidence**. An LLM could generate a plausible but inaccurate justification; explanations therefore require validation and must not be presented as guaranteed faithful or as a substitute for audit records and policy enforcement.
 
-This hybrid approach also introduces **additional latency, cost, and dependencies**. A practical trade-off is to request explanations only when needed (for example, ambiguous decisions, manual review, or high-impact outcomes) instead of explaining every decision. The current PoC **does not implement this extra explanation step**; it compares the providers' decisions, quality, latency, and estimated costs only.
+#### Keeping the decision path fast with asynchronous explanations
+
+An explanation does **not necessarily have to block the business decision**. One possible design is to use Jev on the synchronous, latency-sensitive path and delegate justification to a lower-cost generative model such as Claude Haiku **asynchronously**:
+
+1. **Decide synchronously:** Jev evaluates the input and the application returns the structured decision immediately.
+2. **Queue an explanation:** publish an event or enqueue a background job containing a correlation ID, the relevant input, the decision and any available decision signals. Apply the necessary privacy and access controls to that payload.
+3. **Explain in the background:** Claude Haiku generates a post-hoc, evidence-based justification independently of the original response.
+4. **Store and retrieve:** link the generated explanation to the original decision for later inspection, auditing or review, including an appropriate status when explanation generation fails.
+
+This separates **decision latency** from **explanation latency**: the initial response is governed mainly by Jev's execution time plus orchestration overhead, while the explanation becomes available later. **The latency is deferred, not eliminated.** Additional model time, queueing delays and infrastructure work still exist, and costs increase.
+
+This pattern works only **when the caller can safely act without waiting for the explanation**. Where a regulated or high-impact workflow requires an explanation and its validation *before* approval or execution, explanation generation remains on the critical path. A background-generated rationale must not be represented as Jev's internal reasoning or guaranteed faithful evidence of why Jev made the choice.
+
+A practical trade-off is to request explanations only when needed (for example, ambiguous decisions, manual review or high-impact outcomes), rather than for every decision. **The current PoC does not implement asynchronous explanations**; this is a possible architectural extension, not a measured feature or latency claim.
 
 ### Where each approach fits
 
