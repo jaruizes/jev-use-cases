@@ -21,7 +21,7 @@
 
       <div class="field-label">03 / COMPARE PROVIDERS</div>
       <div class="provider-list">
-        @for (p of (current.kind === 'generation' ? current.providers : $any(['jev', 'haiku', 'sonnet', 'laya'])); track p) {
+        @for (p of availableProviders(current); track p) {
           <label class="check">
             <input type="checkbox" [checked]="providers().includes(p)" (change)="toggle(p)">
             <span>{{ p.toUpperCase() }}</span>
