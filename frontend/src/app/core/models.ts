@@ -1,4 +1,4 @@
-export type ProviderId = 'jev' | 'haiku' | 'sonnet';
+export type ProviderId = 'jev' | 'haiku' | 'sonnet' | 'laya';
 export type UseCaseKind = 'choice' | 'score' | 'noul' | 'multi' | 'generation';
 export interface Scenario { id: string; title: string; input: string; expected: string | number | Record<string,string | number> | null; }
 export interface QualityEntry { provider: ProviderId; correct: number; total: number; accuracyPercent: number | null; }
