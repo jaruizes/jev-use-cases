@@ -5,11 +5,11 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import uuid4
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from .catalog import CASES, BY_ID, public_case
-from .providers import claude, jev
+from .providers import claude, jev, laya
 from .pricing import estimate, list_prices, change_price
 from .scenarios import reference, assess, public_scenarios, validate_dataset
 
@@ -21,7 +21,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", 
 class ExecuteRequest(BaseModel):
     useCaseId: str
     input: str = Field(min_length=1, max_length=20000)
-    providers: list[Literal["jev", "haiku", "sonnet"]] = Field(min_length=1, max_length=3)
+    providers: list[Literal["jev", "haiku", "sonnet", "laya"]] = Field(min_length=1, max_length=4)
     scenarioId: str | None = None
     customScenario: dict[str, Any] | None = None
 
@@ -46,7 +46,10 @@ def execution(execution_id: str):
     return RUNS[execution_id]
 
 @app.post("/api/executions")
-async def execute(body: ExecuteRequest):
+@app.post("/api/playground/executions")
+async def execute(body: ExecuteRequest, request: Request):
+    if "laya" in body.providers and request.url.path != "/api/playground/executions":
+        raise HTTPException(422, "Laya is available in Playground only")
     case = BY_ID.get(body.useCaseId)
     if case is None:
         raise HTTPException(404, "Unknown use case")
@@ -64,14 +67,18 @@ async def execute(body: ExecuteRequest):
     async def run(provider: str) -> dict[str, Any]:
         started = time.perf_counter()
         try:
-            if case.kind == "generation" and provider == "jev":
+            if case.kind == "generation" and provider in ("jev", "laya"):
                 return {"provider": provider, "status": "unsupported", "error": "This provider does not generate open-ended architecture artifacts", "latencyMs": 0}
             if provider == "jev":
                 data = await jev.evaluate(case, body.input)
+            elif provider == "laya":
+                data = await laya.evaluate(case, body.input)
             else:
                 data = await claude.evaluate(case, body.input, provider)
             return {"provider": provider, "status": "success", **data,
-                    **estimate(provider, data.get("model"), data.get("usage")),
+                    **(estimate(provider, data.get("model"), data.get("usage")) if provider != "laya" else {
+                        "estimatedCostUsd": None, "costPer1000Usd": None,
+                        "pricingStatus": "self_hosted_unpriced", "pricingVersion": None}),
                     "correct": assess(case.id, data.get("value"), selected_reference),
                     "latencyMs": round((time.perf_counter() - started) * 1000, 2)}
         except Exception as exc:
