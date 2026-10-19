@@ -22,7 +22,7 @@ export class PlaygroundPage {
 
   cases = signal<UseCase[]>([]);
   selected = signal<UseCase | null>(null);
-  providers = signal<ProviderId[]>(['jev', 'haiku', 'sonnet', 'laya']);
+  providers = signal<ProviderId[]>(['jev', 'haiku', 'sonnet']);
   loading = signal(false);
   error = signal('');
   result = signal<Execution | null>(null);
@@ -47,13 +47,17 @@ export class PlaygroundPage {
     if (!useCase) return;
     this.selected.set(useCase);
     this.input = useCase.example;
-    this.providers.set(useCase.kind === 'generation' ? ['haiku', 'sonnet'] : ['jev', 'haiku', 'sonnet', 'laya']);
+    this.providers.set(useCase.kind === 'generation' ? ['haiku', 'sonnet'] : ['jev', 'haiku', 'sonnet']);
     this.result.set(null);
     this.error.set('');
   }
 
   changeCase(id: string): void {
     void this.router.navigate(['/playground', id]);
+  }
+
+  availableProviders(useCase: UseCase): ProviderId[] {
+    return useCase.kind === 'generation' ? ['haiku', 'sonnet'] : ['jev', 'haiku', 'sonnet', 'laya'];
   }
 
   toggle(provider: ProviderId): void {
