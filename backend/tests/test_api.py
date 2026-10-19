@@ -31,3 +31,13 @@ def test_generation_without_jev():
     response = client.post("/api/executions", json={"useCaseId":"architecture-design","input":"Design an architecture","providers":["jev"]})
     assert response.status_code == 200
     assert response.json()["results"][0]["status"] == "unsupported"
+
+def test_laya_rejected_from_batch_api():
+    response = client.post("/api/executions", json={"useCaseId":"email-classification","input":"hello","providers":["laya"]})
+    assert response.status_code == 422
+    assert "Playground" in response.json()["detail"]
+
+def test_laya_unsupported_for_generation():
+    response = client.post("/api/playground/executions", json={"useCaseId":"architecture-design","input":"Design a system","providers":["laya"]})
+    assert response.status_code == 200
+    assert response.json()["results"][0]["status"] == "unsupported"
