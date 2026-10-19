@@ -22,7 +22,7 @@ export class PlaygroundPage {
 
   cases = signal<UseCase[]>([]);
   selected = signal<UseCase | null>(null);
-  providers = signal<ProviderId[]>(['jev', 'haiku', 'sonnet']);
+  providers = signal<ProviderId[]>(['jev', 'haiku', 'sonnet', 'laya']);
   loading = signal(false);
   error = signal('');
   result = signal<Execution | null>(null);
@@ -47,7 +47,7 @@ export class PlaygroundPage {
     if (!useCase) return;
     this.selected.set(useCase);
     this.input = useCase.example;
-    this.providers.set(useCase.kind === 'generation' ? ['haiku', 'sonnet'] : ['jev', 'haiku', 'sonnet']);
+    this.providers.set(useCase.kind === 'generation' ? ['haiku', 'sonnet'] : ['jev', 'haiku', 'sonnet', 'laya']);
     this.result.set(null);
     this.error.set('');
   }
@@ -77,7 +77,7 @@ export class PlaygroundPage {
     this.loading.set(true);
     this.result.set(null);
     this.error.set('');
-    this.executionApi.execute(useCase.id, this.input, this.providers()).subscribe({
+    this.executionApi.executePlayground(useCase.id, this.input, this.providers()).subscribe({
       next: execution => {
         this.result.set(execution);
         this.loading.set(false);
