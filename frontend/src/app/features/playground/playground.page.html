@@ -21,7 +21,7 @@
 
       <div class="field-label">03 / COMPARE PROVIDERS</div>
       <div class="provider-list">
-        @for (p of current.providers; track p) {
+        @for (p of (current.kind === 'generation' ? current.providers : $any(['jev', 'haiku', 'sonnet', 'laya'])); track p) {
           <label class="check">
             <input type="checkbox" [checked]="providers().includes(p)" (change)="toggle(p)">
             <span>{{ p.toUpperCase() }}</span>
@@ -34,7 +34,7 @@
               (click)="execute()">
         {{ loading() ? 'Running providers…' : '▶ Run comparison' }}
       </button>
-      <p class="note">Calls use your configured API keys. Jev and Claude may incur charges. No demo results are fabricated.</p>
+      <p class="note">Calls use your configured API keys. Jev and Claude may incur charges; local Laya has infrastructure costs. No demo results are fabricated.</p>
     </div>
 
     <div class="panel info">
@@ -43,8 +43,8 @@
       <p>{{ current.prompt }}</p>
       @if (current.kind === 'generation') {
         <div class="jev-limitation" role="note">
-          <strong>JEV IS NOT AN LLM — IT CANNOT GENERATE CONTENT</strong>
-          <p>Jev can choose, score and evaluate bounded propositions, but it cannot generate an open-ended architecture or migration plan. This use case requires a generative LLM.</p>
+          <strong>JEV AND LAYA ARE NOT GENERATIVE LLMS</strong>
+          <p>Jev and Laya can choose, score and evaluate bounded propositions, but it cannot generate an open-ended architecture or migration plan. This use case requires a generative LLM.</p>
         </div>
       }
       <h3>Decision contract</h3>
@@ -65,7 +65,7 @@
         } @else if (current.kind === 'noul') {
           <div><strong>0…1</strong><span>Degree of support for the stated proposition</span></div>
         } @else {
-          <div><strong>Markdown</strong><span>Open-ended architecture proposal with alternatives and trade-offs. Jev is not a generative LLM.</span></div>
+          <div><strong>Markdown</strong><span>Open-ended architecture proposal with alternatives and trade-offs. Neither Jev nor Laya is a generative LLM.</span></div>
         }
       </div>
       <div class="tip">This is a proof of concept. Evaluator accuracy requires an independently reviewed dataset.</div>
