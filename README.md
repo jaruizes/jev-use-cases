@@ -125,7 +125,23 @@ Each use case has one editable Playground input and **30 predefined demonstratio
 
 
 
-## Laya in Playground (experimental, self-hosted)\n\nThe `feat/laya` branch adds **Laya** as a fourth option in **Playground only** for all bounded decision cases (Choice, Score, Noul and multi-decision). The architecture-generation example remains Claude-only. **Test Scenarios remains unchanged** and the `/api/executions` endpoint explicitly rejects Laya; Playground calls `/api/playground/executions`.\n\nOn Docker Desktop for Apple Silicon, Laya runs on **CPU**; MPS acceleration is not available inside Linux containers. First inference downloads model weights into the persistent `laya-models` Docker volume and may take significantly longer. The model service is not exposed outside the Compose network.\n\n```bash\ncp .env.example .env  # if not already configured; retain existing API keys\ndocker compose --profile laya up --build -d\ndocker compose --profile laya logs -f laya\n```\n\nOpen http://localhost:4200, choose a bounded-decision use case in Playground, select **LAYA**, and run it. You may compare it with Jev/Haiku/Sonnet. To start without Laya use the original `docker compose up --build -d`.\n\nLaya returns a model decision, not a natural-language explanation. **No per-request USD price is shown for Laya**: its cost is the compute/infrastructure you provide. Do not mistake the absence of a provider token bill for zero operating cost. The resulting latency includes the internal HTTP request and model execution; first-load timings should not be used as warm-inference benchmarks. Review [Laya upstream](https://github.com/NandhaKishorM/laya) for license, model versions, and accuracy limitations.\n\n## Using the application
+## Laya in Playground (experimental, self-hosted)
+
+The `feat/laya` branch adds **Laya** as a fourth option in **Playground only** for all bounded decision cases (Choice, Score, Noul and multi-decision). The architecture-generation example remains Claude-only. **Test Scenarios remains unchanged** and the `/api/executions` endpoint explicitly rejects Laya; Playground calls `/api/playground/executions`.
+
+On Docker Desktop for Apple Silicon, Laya runs on **CPU**; MPS acceleration is not available inside Linux containers. First inference downloads model weights into the persistent `laya-models` Docker volume and may take significantly longer. The model service is not exposed outside the Compose network.
+
+```bash
+cp .env.example .env  # if not already configured; retain existing API keys
+docker compose --profile laya up --build -d
+docker compose --profile laya logs -f laya
+```
+
+Open http://localhost:4200, choose a bounded-decision use case in Playground, select **LAYA**, and run it. You may compare it with Jev/Haiku/Sonnet. To start without Laya use the original `docker compose up --build -d`.
+
+Laya returns a model decision, not a natural-language explanation. **No per-request USD price is shown for Laya**: its cost is the compute/infrastructure you provide. Do not mistake the absence of a provider token bill for zero operating cost. The resulting latency includes the internal HTTP request and model execution; first-load timings should not be used as warm-inference benchmarks. Review [Laya upstream](https://github.com/NandhaKishorM/laya) for license, model versions, and accuracy limitations.
+
+## Using the application
 
 ### Playground — a single execution
 
