@@ -34,6 +34,8 @@ export class ProviderResultsComponent {
 
   costMessage(status?: string): string {
     switch (status) {
+      case 'self_hosted_unpriced':
+        return 'Self-hosted: infrastructure and energy costs not calculated';
       case 'rate_not_configured':
         return 'Jev rate not configured';
       case 'unknown_model':
