@@ -56,11 +56,11 @@
     </article>
   }
 </div>
-<p class="note">Costs are estimates based on recorded tokens and a versioned rate table, not actual provider invoices. Projections assume equivalent usage per decision and exclude caching, batch discounts, taxes and other fees. A single run is not a statistically valid benchmark.</p>
+<p class="note">API costs are estimates based on recorded tokens and a versioned rate table, not actual provider invoices. Projections assume equivalent usage per decision and exclude caching, batch discounts, taxes and other fees. Laya self-hosted infrastructure costs are not estimated. A single run is not a statistically valid benchmark.</p>
 @if (comparison(); as comp) {
   <div class="cost-comparison">
     <span class="eyebrow">COST COMPARISON · SUCCESSFUL CALLS ONLY</span>
-    <h3>Jev vs Claude</h3>
+    <h3>Priced providers comparison</h3>
     @for (item of comp; track item.provider) {
       <div class="comparison-line">
         <strong>{{ item.provider.toUpperCase() }}</strong>

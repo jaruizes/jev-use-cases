@@ -56,6 +56,10 @@ export class PlaygroundPage {
     void this.router.navigate(['/playground', id]);
   }
 
+  availableProviders(useCase: UseCase): ProviderId[] {
+    return useCase.kind === 'generation' ? ['haiku', 'sonnet'] : ['jev', 'haiku', 'sonnet', 'laya'];
+  }
+
   toggle(provider: ProviderId): void {
     this.providers.update(items =>
       items.includes(provider) ? items.filter(item => item !== provider) : [...items, provider]
@@ -77,7 +81,7 @@ export class PlaygroundPage {
     this.loading.set(true);
     this.result.set(null);
     this.error.set('');
-    this.executionApi.execute(useCase.id, this.input, this.providers()).subscribe({
+    this.executionApi.executePlayground(useCase.id, this.input, this.providers()).subscribe({
       next: execution => {
         this.result.set(execution);
         this.loading.set(false);
