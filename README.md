@@ -1,10 +1,10 @@
 # Jev Decision Lab
 
-> **When should you use Jev instead of a generative LLM?**
+> **When should you use a semantic decision model instead of a generative LLM?**
 
 
 
-Jev Decision Lab is an interactive proof of concept comparing **TypeSafe Jev** with **Claude Haiku** and **Claude Sonnet** in realistic decision workflows. It measures the actual provider responses and latency, estimates their token costs, and lets you explore cases in which a generative model is required instead.
+Jev Decision Lab is an interactive proof of concept comparing **TypeSafe Jev**, **self-hosted Laya** (Playground only), **Claude Haiku** and **Claude Sonnet** in realistic decision workflows. It measures the actual provider responses and latency, estimates their token costs, and lets you explore cases in which a generative model is required instead.
 
 The objective is to understand the **different roles of semantic decision models and generative LLMs**, not to assume that Jev always wins.
 
@@ -125,27 +125,85 @@ Each use case has one editable Playground input and **30 predefined demonstratio
 
 
 
-## Laya in Playground (experimental, self-hosted)
+## Laya: a self-hosted decision model (Playground only)
 
-The `feat/laya` branch adds **Laya** as a fourth option in **Playground only** for all bounded decision cases (Choice, Score, Noul and multi-decision). The architecture-generation example remains Claude-only. **Test Scenarios remains unchanged** and the `/api/executions` endpoint explicitly rejects Laya; Playground calls `/api/playground/executions`.
+[Laya](https://github.com/NandhaKishorM/laya) is an open-weight, non-generative decision model from Convai Innovations. Like Jev, it evaluates bounded semantic questions rather than generating text. **This branch adds Laya only to Playground**, where it can be selected alongside Jev, Haiku and Sonnet. Test Scenarios continues using the original three providers and **does not include Laya** yet.
 
-On Docker Desktop for Apple Silicon, Laya runs on **CPU**; MPS acceleration is not available inside Linux containers. First inference downloads model weights into the persistent `laya-models` Docker volume and may take significantly longer. The model service is not exposed outside the Compose network.
+| Use case | Laya in Playground |
+| --- | --- |
+| Intelligent Model Routing | Yes — Choice |
+| Intelligent Lead Scoring | Yes — Score |
+| Semantic Guardrails | Yes — Noul |
+| Email Classification | Yes — Choice |
+| Incident Prioritization | Yes — Score |
+| Incident Triage | Yes — Score + Noul + Choice, in one request |
+| Architecture Decision & Planning | No — open-ended generation needs an LLM |
 
-```bash
-cp .env.example .env  # if not already configured; retain existing API keys
-docker compose --profile laya up --build -d
-docker compose --profile laya logs -f laya
+### How Laya is integrated
+
+```text
+Browser (Angular, localhost:4200)
+            |
+            v
+FastAPI backend (api:8000)
+    |        |            |
+    |        |            +--> Anthropic (Haiku / Sonnet)
+    |        +---------------> TypeSafe (Jev)
+    +------------------------> http://laya:8000/v1/systemone
+                                  |
+                                  v
+                            Local Laya model (CPU)
 ```
 
-Open http://localhost:4200, choose a bounded-decision use case in Playground, select **LAYA**, and run it. You may compare it with Jev/Haiku/Sonnet. To start without Laya use the original `docker compose up --build -d`.
+Laya runs in its **own Docker container**. The backend calls it using Docker Compose internal DNS, so **no public port or additional API key is required** for local Laya inference. The browser connects to FastAPI only. An adapter maps the existing Choice, Score, Noul and multi-question decision definitions into Laya's compatible HTTP API, then validates and normalizes the responses.
 
-Laya returns a model decision, not a natural-language explanation. **No per-request USD price is shown for Laya**: its cost is the compute/infrastructure you provide. Do not mistake the absence of a provider token bill for zero operating cost. The resulting latency includes the internal HTTP request and model execution; first-load timings should not be used as warm-inference benchmarks. Review [Laya upstream](https://github.com/NandhaKishorM/laya) for license, model versions, and accuracy limitations.
+The separate `POST /api/playground/executions` endpoint enables Laya for interactive runs. The original `POST /api/executions` endpoint rejects Laya to keep Test Scenarios unchanged.
+
+### Start Laya and the application
+
+With the `feat/laya` branch checked out and Docker Desktop running:
+
+```bash
+git fetch origin
+git switch feat/laya
+
+# Only create the file if it does not already exist; keep your existing keys.
+test -f .env || cp .env.example .env
+
+docker compose up --build -d
+docker compose ps
+docker compose logs -f laya
+```
+
+**No `--profile laya` flag is necessary.** Laya is part of the default Compose stack, alongside `api` and `frontend`. Do **not** add a `depends_on: laya` to the frontend: Angular communicates with FastAPI, not with the model server. The backend reaches Laya by its Compose service name.
+
+On a Mac with Apple Silicon (including M1 Pro), Docker's Linux container runs the model on **CPU** rather than Apple MPS. Laya's checkpoint is downloaded on the **first inference** and cached in the persistent `laya-models` volume; first-request latency can be high. A running container does not necessarily mean the model is already loaded. Laya remains optional **as a selected inference provider** in Playground, even though its container starts with Compose.
+
+To try it, open **http://localhost:4200**, choose any bounded-decision use case in **Playground**, tick **LAYA**, and click **Run comparison**. For a Laya-only request, uncheck the other providers (and no cloud API keys are needed).
+
+Useful troubleshooting commands:
+
+```bash
+docker compose ps
+docker compose logs --tail=100 laya
+docker compose logs --tail=100 api
+docker compose restart laya
+```
+
+If you previously added `depends_on: laya` to `frontend`, revert that local change. If the new service does not appear, verify you are using the current `feat/laya` branch and that you have updated the Compose file.
+
+### Measurement caveats
+
+- **Laya's latency** displayed in Playground is the end-to-end API call via FastAPI to the local model container, not a hardware-normalized inference benchmark. Separate cold-start/download time from warm requests.
+- **Laya's cost** is intentionally **N/A**, not `$0`: self-hosting incurs CPU, memory, power, and operational costs that are not included in the API token pricing table.
+- **Laya is excluded from the benchmark cost/comparison charts**: unlike Jev and Claude's managed APIs, its operating cost depends on the local hardware and infrastructure running the model (CPU/GPU, memory, utilization, energy and maintenance). There is no meaningful provider token price to plot alongside API charges. Laya results can still be inspected in Playground, including observed latency, but that latency also depends on the host and should not be treated as a hardware-independent benchmark. This is a scope/measurement limitation, not evidence that Laya is free or slower/faster by default.
+- **Quality and reliability** are not guaranteed by API/schema compatibility. Compare actual predictions on representative inputs before drawing conclusions. Laya is a model for bounded decisions and does not generate a causal explanation of its reasoning.
 
 ## Using the application
 
 ### Playground — a single execution
 
-Select one use case, edit or replace the provided input, choose Jev/Haiku/Sonnet where supported, and click **Run comparison**. Each provider receives equivalent context, and the UI displays:
+Select one use case, edit or replace the provided input, choose Jev/Laya/Haiku/Sonnet where supported (Laya is Playground-only), and click **Run comparison**. Each provider receives equivalent context, and the UI displays:
 
 - Structured decisions or generated text, raw responses and error details.
 - Measured latency, provider-reported tokens and estimated USD costs.
@@ -245,14 +303,15 @@ Each scenario has exactly `id`, `title`, `input`, `expected`. The `useCaseId` mu
 ### Requirements
 
 - **Docker Engine / Docker Desktop** with Docker Compose v2.
-- **TypeSafe API key** and **Anthropic API key** for live comparisons.
-- Network connectivity to both provider APIs. Live requests can incur charges.
+- **TypeSafe API key** and **Anthropic API key** for their respective cloud-provider comparisons. Neither key is required for Laya-only Playground runs.
+- Network connectivity for cloud providers and for the initial download of Laya model weights. Cloud API requests can incur charges; Laya consumes local compute.
 
 ### 1. Clone the repository
 
 ```bash
 git clone https://github.com/jaruizes/jev-use-cases.git
 cd jev-use-cases
+git switch feat/laya
 ```
 
 
@@ -288,7 +347,7 @@ Never commit `.env` or put credentials in Angular code. The keys are only passed
 docker compose up --build -d
 ```
 
-The application will be available at http://localhost:4200
+This starts **frontend, api and laya** with the default Compose configuration. The application is available at http://localhost:4200. The local model becomes ready for inference after downloading and loading its weights on first use.
 
 
 
@@ -301,6 +360,7 @@ Estimates are based on reported tokens, a versioned price table and the configur
 | Jev | 0.042 | 0 | [TypeSafe](https://typesafe.ai/blog/introducing-system-one-models-and-jev) |
 | Claude Haiku 5.5 (≤100k input) | 0.10 | 0.50 | [Anthropic official pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
 | Claude Sonnet 5.5 | 2 | 10 | [Anthropic official pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+| Laya (local) | N/A | N/A | Self-hosted; infrastructure costs not estimated |
 
 The Jev list price comes from [TypeSafe's System One announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev). **Anthropic pricing source:** [Official Claude API pricing documentation](https://platform.claude.com/docs/en/about-claude/pricing), including the **Claude Haiku 5.5** and **Claude Sonnet 5.5** model rates and Haiku's long-prompt tier. These are **estimates**, not invoices; they exclude negotiated terms, taxes, caching and batch effects.
 
@@ -323,4 +383,5 @@ Haiku 5.5 has a second published price tier for inputs greater than 100,000 toke
 - [TypeSafe — Introducing System One Models and Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
 - [TypeSafe — System One](https://docs.typesafe.ai/concepts/system-one)
 - [Anthropic API documentation](https://docs.anthropic.com/)
+- [Laya — GitHub repository and documentation](https://github.com/NandhaKishorM/laya)
 
