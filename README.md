@@ -139,6 +139,8 @@ Each use case has one editable Playground input and **30 predefined demonstratio
 | Incident Triage | Yes — Score + Noul + Choice, in one request |
 | Architecture Decision & Planning | No — open-ended generation needs an LLM |
 
+
+
 ### How Laya is integrated
 
 ```text
@@ -159,38 +161,7 @@ Laya runs in its **own Docker container**. The backend calls it using Docker Com
 
 The separate `POST /api/playground/executions` endpoint enables Laya for interactive runs. The original `POST /api/executions` endpoint rejects Laya to keep Test Scenarios unchanged.
 
-### Start Laya and the application
 
-With the `feat/laya` branch checked out and Docker Desktop running:
-
-```bash
-git fetch origin
-git switch feat/laya
-
-# Only create the file if it does not already exist; keep your existing keys.
-test -f .env || cp .env.example .env
-
-docker compose up --build -d
-docker compose ps
-docker compose logs -f laya
-```
-
-**No `--profile laya` flag is necessary.** Laya is part of the default Compose stack, alongside `api` and `frontend`. Do **not** add a `depends_on: laya` to the frontend: Angular communicates with FastAPI, not with the model server. The backend reaches Laya by its Compose service name.
-
-On a Mac with Apple Silicon (including M1 Pro), Docker's Linux container runs the model on **CPU** rather than Apple MPS. Laya's checkpoint is downloaded on the **first inference** and cached in the persistent `laya-models` volume; first-request latency can be high. A running container does not necessarily mean the model is already loaded. Laya remains optional **as a selected inference provider** in Playground, even though its container starts with Compose.
-
-To try it, open **http://localhost:4200**, choose any bounded-decision use case in **Playground**, tick **LAYA**, and click **Run comparison**. For a Laya-only request, uncheck the other providers (and no cloud API keys are needed).
-
-Useful troubleshooting commands:
-
-```bash
-docker compose ps
-docker compose logs --tail=100 laya
-docker compose logs --tail=100 api
-docker compose restart laya
-```
-
-If you previously added `depends_on: laya` to `frontend`, revert that local change. If the new service does not appear, verify you are using the current `feat/laya` branch and that you have updated the Compose file.
 
 ### Measurement caveats
 
@@ -198,6 +169,8 @@ If you previously added `depends_on: laya` to `frontend`, revert that local chan
 - **Laya's cost** is intentionally **N/A**, not `$0`: self-hosting incurs CPU, memory, power, and operational costs that are not included in the API token pricing table.
 - **Laya is excluded from the benchmark cost/comparison charts**: unlike Jev and Claude's managed APIs, its operating cost depends on the local hardware and infrastructure running the model (CPU/GPU, memory, utilization, energy and maintenance). There is no meaningful provider token price to plot alongside API charges. Laya results can still be inspected in Playground, including observed latency, but that latency also depends on the host and should not be treated as a hardware-independent benchmark. This is a scope/measurement limitation, not evidence that Laya is free or slower/faster by default.
 - **Quality and reliability** are not guaranteed by API/schema compatibility. Compare actual predictions on representative inputs before drawing conclusions. Laya is a model for bounded decisions and does not generate a causal explanation of its reasoning.
+
+
 
 ## Using the application
 
@@ -225,7 +198,7 @@ Click on "Run comparison" to get the results:
 
 ![uc-6-results](docs/pictures/uc-6-results.jpg)
 
-In this case, Jev is 59.4 times cheaper than Haiku and 178.1 times cheaper than Sonnet. And latency is also better, 3 times faster than Haiku and 4.7 times faster than Sonnet.
+In this case, Jev is 59.4 times cheaper than Haiku and 178.1 times cheaper than Sonnet. And latency is also better, 2,9 times faster than Haiku and 3.3 times faster than Sonnet (Laya's metrics are not shown because Laya is executed in local infrastructure)
 
 
 
@@ -241,7 +214,7 @@ If we click in "Run comparision" we'll get the results:
 
 
 
-In this case, Jev is 56.9 times cheaper and 3.8 times faster than Haiku and 170.7 times cheaper and 5.2 times faster than Sonnet.
+In this case, Jev is 56.9 times cheaper and 1.9 times faster than Haiku and 170.7 times cheaper and 2.6 times faster than Sonnet. (Laya's metrics are not shown because Laya is executed in local infrastructure)
 
 
 
