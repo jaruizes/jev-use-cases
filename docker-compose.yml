@@ -30,8 +30,6 @@ services:
       HF_HOME: /models/huggingface
     volumes:
       - laya-models:/models/huggingface
-    # No published port: API reaches http://laya:8000 inside the Compose network.
-    profiles: [laya]
   frontend:
     build: ./frontend
     ports:
