@@ -196,6 +196,7 @@ If you previously added `depends_on: laya` to `frontend`, revert that local chan
 
 - **Laya's latency** displayed in Playground is the end-to-end API call via FastAPI to the local model container, not a hardware-normalized inference benchmark. Separate cold-start/download time from warm requests.
 - **Laya's cost** is intentionally **N/A**, not `$0`: self-hosting incurs CPU, memory, power, and operational costs that are not included in the API token pricing table.
+- **Laya is excluded from the benchmark cost/comparison charts**: unlike Jev and Claude's managed APIs, its operating cost depends on the local hardware and infrastructure running the model (CPU/GPU, memory, utilization, energy and maintenance). There is no meaningful provider token price to plot alongside API charges. Laya results can still be inspected in Playground, including observed latency, but that latency also depends on the host and should not be treated as a hardware-independent benchmark. This is a scope/measurement limitation, not evidence that Laya is free or slower/faster by default.
 - **Quality and reliability** are not guaranteed by API/schema compatibility. Compare actual predictions on representative inputs before drawing conclusions. Laya is a model for bounded decisions and does not generate a causal explanation of its reasoning.
 
 ## Using the application
